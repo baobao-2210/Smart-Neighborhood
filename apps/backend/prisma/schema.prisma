@@ -1,0 +1,460 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ==========================================
+// 1. ENUMS & ĐỊNH NGHĨA HỆ THỐNG
+// ==========================================
+
+enum UserRole {
+  SUPER_ADMIN     // Quản trị viên hệ thống cấp Phường/Quận
+  TO_TRUONG       // Trưởng ban điều hành / Tổ trưởng tổ dân phố
+  TO_PHO          // Tổ phó tổ dân phố
+  CAN_BO          // Cán bộ phụ trách chuyên trách (y tế, trật tự, văn hóa)
+  CANH_SAT_KV     // Cảnh sát khu vực phụ trách địa bàn
+  CU_DAN          // Cư dân / Chủ hộ / Nhân khẩu
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum ResidenceStatus {
+  THUONG_TRU      // Thường trú (Hộ khẩu cố định tại tổ)
+  TAM_TRU         // Tạm trú (Có đăng ký tạm trú hợp pháp)
+  TAM_VANG        // Tạm vắng (Thường trú nhưng đang tạm vắng)
+  LUU_TRU         // Lưu trú (Thuê nhà ngắn hạn, công nhân, sinh viên)
+}
+
+enum HouseholdRelation {
+  CHU_HO          // Chủ hộ
+  VO_CHONG        // Vợ / Chồng
+  CON_DE          // Con đẻ
+  CON_NUOI        // Con nuôi
+  BO_ME           // Bố / Mẹ
+  ONG_BA          // Ông / Bà
+  CHAU            // Cháu nội / Cháu ngoại
+  ANH_CHI_EM      // Anh / Chị / Em
+  NGUOI_THUE      // Người thuê trọ
+  KHAC            // Mối quan hệ khác
+}
+
+enum AnnouncementPriority {
+  NORMAL          // Bình thường (Thông tin sinh hoạt)
+  IMPORTANT       // Quan trọng (Lịch cắt điện nước, tiêm chủng)
+  URGENT          // Khẩn cấp (Bão lũ, dịch bệnh, an ninh)
+}
+
+enum FundType {
+  BAT_BUOC        // Khoản thu bắt buộc (Phí vệ sinh, an ninh)
+  TU_NGUYEN       // Vận động quyên góp (Vì người nghèo, khuyến học)
+}
+
+enum PaymentStatus {
+  PENDING         // Chờ thanh toán / Chờ xác nhận
+  COMPLETED       // Đã hoàn tất đóng nộp
+  CANCELLED       // Đã hủy biên lai
+}
+
+enum PaymentMethod {
+  TIEN_MAT        // Tiền mặt (Nộp trực tiếp cho tổ trưởng/thủ quỹ)
+  VIETQR          // Chuyển khoản ngân hàng qua mã VietQR
+  VNPAY           // Cổng thanh toán trực tuyến
+}
+
+enum RequestStatus {
+  CHO_TIEP_NHAN   // Mới gửi, chờ cán bộ tiếp nhận
+  DANG_XU_LY      // Đang trong quá trình xử lý, kiểm tra thực địa
+  DA_XU_LY        // Đã giải quyết xong, có kết quả phản hồi
+  TU_CHOI         // Từ chối (Không thuộc thẩm quyền, sai sự thật)
+}
+
+enum PlaceCategory {
+  NHA_VAN_HOA     // Nhà sinh hoạt cộng đồng / Nhà văn hóa
+  TRAM_Y_TE       // Trạm y tế / Bệnh viện lân cận
+  DIEM_RUC_RAC    // Điểm tập kết rác thải / Vệ sinh môi trường
+  CAMERA_AN_NINH  // Vị trí camera giám sát an ninh
+  DIEM_CUU_HOA    // Trụ nước cứu hỏa / Bình chữa cháy công cộng
+  DIEM_TRU_AN     // Điểm tránh trú thiên tai, nhà lánh nạn khẩn cấp
+}
+
+// ==========================================
+// 2. PHÂN VÙNG HÀNH CHÍNH & TỔ DÂN PHỐ
+// ==========================================
+
+model ToDanPho {
+  id              String      @id @default(uuid())
+  code            String      @unique // Mã định danh tổ dân phố (VD: TDP-05-P12)
+  name            String      // Tên tổ dân phố (VD: Tổ dân phố số 5)
+  ward            String      // Phường / Xã
+  district        String      // Quận / Huyện
+  city            String      // Tỉnh / Thành phố
+  boundaryGeoJson Json?       // Dữ liệu tọa độ ranh giới địa lý (Polygon GeoJSON)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  // Quan hệ
+  users           User[]
+  households      Household[]
+  posts           Post[]
+  announcements   Announcement[]
+  events          Event[]
+  fundCampaigns   FundCampaign[]
+  communityPlaces CommunityPlace[]
+  communityRequests CommunityRequest[]
+
+  @@map("to_dan_pho")
+}
+
+// ==========================================
+// 3. TÀI KHOẢN, PHÂN QUYỀN & HỒ SƠ (MODULE 7)
+// ==========================================
+
+model User {
+  id               String       @id @default(uuid())
+  phoneNumber      String       @unique // Số điện thoại dùng làm tên đăng nhập
+  passwordHash     String       // Mật khẩu mã hóa Argon2 hoặc Bcrypt
+  fullName         String       // Họ và tên hiển thị
+  avatarUrl        String?
+  role             UserRole     @default(CU_DAN)
+  isActive         Boolean      @default(true)
+  toDanPhoId       String
+  toDanPho         ToDanPho     @relation(fields: [toDanPhoId], references: [id])
+  refreshTokenHash String?      // Lưu trữ token xoay vòng bảo mật
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  // Quan hệ
+  residentProfile Resident?    // Hồ sơ cư dân liên kết
+  deviceTokens    DeviceToken[]
+  posts           Post[]
+  comments        Comment[]
+  reactions       PostReaction[]
+  readReceipts    AnnouncementReadReceipt[]
+  eventAttendees  EventAttendee[]
+  createdRequests CommunityRequest[]
+  auditLogs       AuditLog[]
+
+  @@index([toDanPhoId])
+  @@map("users")
+}
+
+model DeviceToken {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token       String   @unique // Expo Push Token hoặc FCM token
+  deviceType  String   // ios, android
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("device_tokens")
+}
+
+// ==========================================
+// 4. QUẢN LÝ CƯ DÂN & HỘ KHẨU (MODULE 3)
+// ==========================================
+
+model Household {
+  id              String       @id @default(uuid())
+  code            String       @unique // Mã sổ hộ gia đình (VD: HK-2026-0042)
+  houseNumber     String       // Số nhà, tên ngõ
+  streetName      String       // Đường / Phố
+  toDanPhoId      String
+  toDanPho        ToDanPho     @relation(fields: [toDanPhoId], references: [id])
+  latitude        Float?       // Tọa độ định vị nhà
+  longitude       Float?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  // Quan hệ
+  residents       Resident[]
+  contributions   ContributionRecord[]
+
+  @@index([toDanPhoId])
+  @@map("households")
+}
+
+model Resident {
+  id              String            @id @default(uuid())
+  householdId     String
+  household       Household         @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  userId          String?           @unique // Liên kết tài khoản app nếu đã tạo
+  user            User?             @relation(fields: [userId], references: [id])
+  fullName        String
+  cccdNumber      String?           @unique // Số CCCD 12 số định danh
+  dateOfBirth     DateTime
+  gender          Gender
+  relationToHead  HouseholdRelation @default(CON_DE)
+  residenceStatus ResidenceStatus   @default(THUONG_TRU)
+  career          String?           // Nghề nghiệp
+  notes           String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@index([householdId])
+  @@index([cccdNumber])
+  @@map("residents")
+}
+
+// ==========================================
+// 5. BẢNG TIN CỘNG ĐỒNG (MODULE 1)
+// ==========================================
+
+model Post {
+  id          String         @id @default(uuid())
+  toDanPhoId  String
+  toDanPho    ToDanPho       @relation(fields: [toDanPhoId], references: [id])
+  authorId    String
+  author      User           @relation(fields: [authorId], references: [id])
+  content     String         // Nội dung bài đăng
+  isPinned    Boolean        @default(false)
+  isOfficial  Boolean        @default(false) // Đăng bởi Ban điều hành tổ
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  // Quan hệ
+  media       PostMedia[]
+  comments    Comment[]
+  reactions   PostReaction[]
+
+  @@index([toDanPhoId, createdAt(sort: Desc)])
+  @@map("posts")
+}
+
+model PostMedia {
+  id          String   @id @default(uuid())
+  postId      String
+  post        Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  mediaUrl    String   // Link ảnh hoặc tài liệu
+  mediaType   String   // image/jpeg, image/png, video/mp4
+  displayOrder Int     @default(0)
+
+  @@map("post_media")
+}
+
+model Comment {
+  id          String    @id @default(uuid())
+  postId      String
+  post        Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  authorId    String
+  author      User      @relation(fields: [authorId], references: [id])
+  content     String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([postId, createdAt])
+  @@map("comments")
+}
+
+model PostReaction {
+  id          String   @id @default(uuid())
+  postId      String
+  post        Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  type        String   @default("LIKE") // LIKE, HEART, CLAP
+  createdAt   DateTime @default(now())
+
+  @@unique([postId, userId])
+  @@map("post_reactions")
+}
+
+// ==========================================
+// 6. THÔNG BÁO VÀ SỰ KIỆN (MODULE 2)
+// ==========================================
+
+model Announcement {
+  id          String               @id @default(uuid())
+  toDanPhoId  String
+  toDanPho    ToDanPho             @relation(fields: [toDanPhoId], references: [id])
+  title       String
+  content     String
+  priority    AnnouncementPriority @default(NORMAL)
+  senderTitle String               // VD: Trưởng ban điều hành, Trưởng CAKV
+  attachedUrl String?              // File thông báo đính kèm (PDF, văn bản hành chính)
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  readReceipts AnnouncementReadReceipt[]
+
+  @@index([toDanPhoId, priority, createdAt(sort: Desc)])
+  @@map("announcements")
+}
+
+model AnnouncementReadReceipt {
+  id              String       @id @default(uuid())
+  announcementId  String
+  announcement    Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  userId          String
+  user            User         @relation(fields: [userId], references: [id])
+  readAt          DateTime     @default(now())
+
+  @@unique([announcementId, userId])
+  @@map("announcement_read_receipts")
+}
+
+model Event {
+  id          String         @id @default(uuid())
+  toDanPhoId  String
+  toDanPho    ToDanPho       @relation(fields: [toDanPhoId], references: [id])
+  title       String         // Tiêu đề sự kiện: Họp tổ dân phố, Ngày hội Đại đoàn kết
+  description String
+  location    String         // Địa điểm: Nhà sinh hoạt văn hóa
+  startTime   DateTime
+  endTime     DateTime?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  attendees   EventAttendee[]
+
+  @@index([toDanPhoId, startTime])
+  @@map("events")
+}
+
+model EventAttendee {
+  id          String    @id @default(uuid())
+  eventId     String
+  event       Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  isConfirmed Boolean   @default(true)
+  registeredAt DateTime @default(now())
+
+  @@unique([eventId, userId])
+  @@map("event_attendees")
+}
+
+// ==========================================
+// 7. QUẢN LÝ THU CHI VÀ ĐÓNG GÓP (MODULE 4)
+// ==========================================
+
+model FundCampaign {
+  id            String         @id @default(uuid())
+  toDanPhoId    String
+  toDanPho      ToDanPho       @relation(fields: [toDanPhoId], references: [id])
+  title         String         // VD: Quỹ Khuyến học năm 2026, Phí Vệ sinh quý 4/2026
+  description   String?
+  type          FundType       @default(BAT_BUOC)
+  targetAmount  Decimal?       @db.Decimal(15, 2)
+  amountPerUnit Decimal?       @db.Decimal(15, 2) // Định mức mỗi hộ
+  startDate     DateTime
+  endDate       DateTime?
+  isActive      Boolean        @default(true)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  contributions ContributionRecord[]
+  expenses      ExpenseRecord[]
+
+  @@index([toDanPhoId, isActive])
+  @@map("fund_campaigns")
+}
+
+model ContributionRecord {
+  id            String        @id @default(uuid())
+  campaignId    String
+  campaign      FundCampaign  @relation(fields: [campaignId], references: [id])
+  householdId   String
+  household     Household     @relation(fields: [householdId], references: [id])
+  amount        Decimal       @db.Decimal(15, 2)
+  status        PaymentStatus @default(PENDING)
+  paymentMethod PaymentMethod @default(TIEN_MAT)
+  receiptNumber String        @unique // Số biên lai thu
+  payerName     String        // Người đứng ra nộp
+  notes         String?
+  paidAt        DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([campaignId, householdId])
+  @@map("contribution_records")
+}
+
+model ExpenseRecord {
+  id            String       @id @default(uuid())
+  campaignId    String
+  campaign      FundCampaign @relation(fields: [campaignId], references: [id])
+  title         String       // Khoản chi: Chi thuê xe gom rác, Chi quà khuyến học
+  amount        Decimal      @db.Decimal(15, 2)
+  invoiceUrl    String?      // Hóa đơn, chứng từ chi
+  spentBy       String       // Người thực hiện chi
+  spentAt       DateTime     @default(now())
+  createdAt     DateTime     @default(now())
+
+  @@index([campaignId])
+  @@map("expense_records")
+}
+
+// ==========================================
+// 8. BẢN ĐỒ CỘNG ĐỒNG VÀ ĐỊA ĐIỂM (MODULE 5)
+// ==========================================
+
+model CommunityPlace {
+  id          String        @id @default(uuid())
+  toDanPhoId  String
+  toDanPho    ToDanPho      @relation(fields: [toDanPhoId], references: [id])
+  name        String        // Tên địa điểm: Nhà văn hóa TDP số 5, Trụ cứu hỏa số 2
+  category    PlaceCategory
+  address     String
+  latitude    Float
+  longitude   Float
+  imageUrl    String?
+  details     Json?         // Thông tin bổ sung: thời gian mở cửa, số liên hệ khẩn cấp
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([toDanPhoId, category])
+  @@map("community_places")
+}
+
+// ==========================================
+// 9. KẾT NỐI CỘNG ĐỒNG VÀ PHẢN ÁNH (MODULE 6)
+// ==========================================
+
+model CommunityRequest {
+  id          String        @id @default(uuid())
+  toDanPhoId  String
+  toDanPho    ToDanPho      @relation(fields: [toDanPhoId], references: [id])
+  creatorId   String
+  creator     User          @relation(fields: [creatorId], references: [id])
+  title       String        // VD: Phản ánh tiếng ồn sau 23h tại ngõ 12
+  content     String
+  category    String        // An ninh trật tự, Vệ sinh môi trường, Đèn đường, Hạ tầng
+  images      String[]      // Mảng link ảnh chứng cứ hiện trường
+  status      RequestStatus @default(CHO_TIEP_NHAN)
+  responderId String?       // Cán bộ nhận nhiệm vụ xử lý
+  responseNote String?      // Nội dung trả lời kết quả xử lý
+  resolvedAt  DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([toDanPhoId, status, createdAt(sort: Desc)])
+  @@map("community_requests")
+}
+
+// ==========================================
+// 10. NHẬT KÝ KIỂM TOÁN HỆ THỐNG (AUDIT LOGS)
+// ==========================================
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id])
+  action      String   // LOGIN, CREATE_ANNOUNCEMENT, RECORD_PAYMENT, MODIFY_RESIDENT
+  resource    String   // USERS, HOUSEHOLDS, FINANCE
+  details     Json?    // Dữ liệu cũ và mới để đối soát
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+
+  @@index([action, createdAt])
+  @@map("audit_logs")
+}
