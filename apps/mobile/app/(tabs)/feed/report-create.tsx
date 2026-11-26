@@ -458,7 +458,7 @@ const styles = StyleSheet.create({
   mapPreviewBox: {
     height: 116,
     borderRadius: RADIUS.lg,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: COLORS.surfaceAlt,
     borderWidth: 1,
     borderColor: COLORS.border,
     alignItems: 'center',

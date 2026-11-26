@@ -7,6 +7,7 @@ import {
   Switch,
   Alert,
   TextInput,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -107,18 +108,19 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Stitch Top Bar */}
+      {/* Espresso Dark Top Header */}
       <View style={styles.topHeader}>
         <View style={styles.headerLeft}>
           <View style={styles.brandIconBox}>
-            <Ionicons name="person" size={18} color={COLORS.primary} />
+            <Ionicons name="business" size={18} color={COLORS.primary} />
           </View>
           <View>
-            <AppText variant="body" semibold>
-              {user.neighborhoodName || 'Tổ 12 - P. Yên Hòa'}
-            </AppText>
+            <View style={{ flexDirection: 'row' }}>
+              <AppText variant="label" color={COLORS.textPrimary} style={{ fontSize: 13 }}>SMART </AppText>
+              <AppText variant="label" color={COLORS.warning} style={{ fontSize: 13 }}>NEIGHBORHOOD</AppText>
+            </View>
             <AppText variant="caption" color={COLORS.textMuted}>
-              Hồ sơ cư dân số
+              {user.neighborhoodName || 'Tổ dân phố 12 - P. Dịch Vọng Hậu'}
             </AppText>
           </View>
         </View>
@@ -126,111 +128,129 @@ export default function ProfileScreen() {
           onPress={() => router.push('/(tabs)/notice' as any)}
           style={styles.bellBtn}
         >
-          <Ionicons name="notifications-outline" size={20} color={COLORS.textPrimary} />
+          <Ionicons name="megaphone-outline" size={18} color={COLORS.warning} />
         </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
-        {/* Stitch Hero Profile Card */}
-        <AppCard style={styles.heroCard}>
-          <View style={styles.heroTopRow}>
-            <View style={styles.avatarWrap}>
-              <Avatar
-                name={user.fullName}
-                uri={user.avatarUrl}
-                size={68}
-                isOfficial={isOfficer}
-              />
-              <View style={styles.verifiedTick}>
-                <Ionicons name="checkmark" size={11} color={COLORS.textInverse} />
-              </View>
-            </View>
-            <View style={styles.heroInfo}>
-              <AppText variant="h2" numberOfLines={1}>{user.fullName}</AppText>
-              <Badge
-                label={getRoleLabel(user.role, user.staffTitle)}
-                tone={isOfficer ? 'primary' : 'success'}
-                style={{ marginTop: 4 }}
-              />
-              <AppText variant="caption" color={COLORS.textSecondary} style={{ marginTop: 6 }}>
-                {user.phoneNumber} • {household ? `Số ${household.houseNumber}, ${household.street}` : user.neighborhoodName || 'Cư dân Tổ dân phố'}
+        {/* Vibrant VNeID Card */}
+        <View style={styles.vneidHeroCard}>
+          <View style={styles.vneidTopRow}>
+            <View style={styles.vneidVerifiedPill}>
+              <Ionicons name="checkmark-circle" size={13} color={COLORS.warning} />
+              <AppText variant="label" color="#FEF3C7" style={{ marginLeft: 4, fontSize: 10 }}>
+                CƯ DÂN ĐÃ XÁC THỰC VNEID
               </AppText>
             </View>
-          </View>
-
-          <View style={styles.heroBtnRow}>
             <TouchableOpacity
               onPress={() =>
                 Alert.alert(
                   'Mã QR Cư dân số',
-                  `Mã định danh: ${user.id.slice(0, 8).toUpperCase()}\nHọ tên: ${user.fullName}\nSĐT: ${user.phoneNumber}`,
+                  `Mã định danh: #CD-${user.id.slice(0, 6).toUpperCase()}\nHọ tên: ${user.fullName}\nSĐT: ${user.phoneNumber}`,
                 )
               }
-              style={styles.qrBtn}
+              style={styles.qrPill}
             >
-              <Ionicons name="qr-code-outline" size={16} color={COLORS.textInverse} />
-              <AppText variant="label" color={COLORS.textInverse} style={{ marginLeft: 6 }}>
-                Mã QR Cư dân
-              </AppText>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => setShowPwdForm(!showPwdForm)}
-              style={styles.editBtn}
-            >
-              <Ionicons name="create-outline" size={16} color={COLORS.primary} />
-              <AppText variant="label" color={COLORS.primary} style={{ marginLeft: 6 }}>
-                Bảo mật & Mật khẩu
+              <Ionicons name="qr-code-outline" size={13} color={COLORS.primary} />
+              <AppText variant="label" color={COLORS.textPrimary} style={{ marginLeft: 4, fontSize: 11 }}>
+                Mã QR
               </AppText>
             </TouchableOpacity>
           </View>
-        </AppCard>
 
-        {isOfficer && (
-          <AppCard style={styles.section}>
-            <AppText variant="label" color={COLORS.primary} style={{ marginBottom: 4 }}>
-              CỔNG CÁN BỘ TỔ DÂN PHỐ
-            </AppText>
-            <TouchableOpacity
-              style={styles.menuRow}
-              onPress={() => router.push('/(tabs)/residents')}
-            >
-              <View style={styles.menuLeft}>
-                <View style={[styles.menuIconBox, { backgroundColor: COLORS.primaryLight }]}>
-                  <Ionicons name="people-outline" size={18} color={COLORS.primary} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <AppText variant="body" semibold>
-                    Quản lý Cư dân & Hộ gia đình
-                  </AppText>
-                  <AppText variant="caption" color={COLORS.textMuted}>
-                    Tra cứu nhân khẩu, hộ khẩu điện tử
-                  </AppText>
-                </View>
-              </View>
-              <Ionicons name="chevron-forward" size={18} color={COLORS.textMuted} />
-            </TouchableOpacity>
-          </AppCard>
-        )}
-
-        {/* Sổ Hộ Khẩu Điện Tử */}
-        <AppCard style={styles.section}>
-          <View style={styles.householdHeader}>
-            <View style={styles.householdTitleRow}>
-              <View style={[styles.menuIconBox, { backgroundColor: COLORS.primaryLight }]}>
-                <Ionicons name="home-outline" size={18} color={COLORS.primary} />
-              </View>
-              <View>
-                <AppText variant="h3" style={{ fontSize: 16 }}>
-                  Sổ Hộ Khẩu Điện Tử
-                </AppText>
-                <AppText variant="caption" color={COLORS.textMuted}>
-                  {household ? `Mã hộ: ${household.code}` : 'Chưa liên kết mã hộ'}
+          <View style={styles.heroUserRow}>
+            <Avatar
+              name={user.fullName}
+              uri={user.avatarUrl}
+              size={60}
+              isOfficial={isOfficer}
+            />
+            <View style={{ flex: 1 }}>
+              <AppText variant="h2" color="#FFFFFF" numberOfLines={1}>{user.fullName}</AppText>
+              <AppText variant="caption" color="#FDE68A" style={{ marginTop: 2 }}>
+                {getRoleLabel(user.role, user.staffTitle)} • {user.phoneNumber}
+              </AppText>
+              <View style={styles.codeTag}>
+                <AppText variant="caption" color="#F5F5F4" style={{ fontSize: 11 }}>
+                  Mã CD: #CD-{user.id.slice(0, 6).toUpperCase()}
                 </AppText>
               </View>
             </View>
-            <Badge label={`${memberCount} nhân khẩu`} tone="primary" />
           </View>
 
+          <View style={styles.addressBanner}>
+            <Ionicons name="location-outline" size={14} color="#FDE68A" />
+            <AppText variant="caption" color="#FFFFFF" numberOfLines={1} style={{ marginLeft: 6, flex: 1 }}>
+              {household ? `Số ${household.houseNumber}, ${household.street}` : user.neighborhoodName || 'Khu dân cư Tổ dân phố'}
+            </AppText>
+          </View>
+        </View>
+
+        {/* 4-Column Stats Row */}
+        <AppCard style={styles.statsCard}>
+          <View style={styles.statCol}>
+            <View style={[styles.statIconBox, { backgroundColor: COLORS.primaryLight }]}>
+              <Ionicons name="warning-outline" size={16} color={COLORS.primary} />
+            </View>
+            <AppText variant="h3" color={COLORS.primary}>{history?.reports?.length ?? 0}</AppText>
+            <AppText variant="caption" color={COLORS.textMuted} style={{ fontSize: 11 }}>Phản ánh</AppText>
+          </View>
+
+          <View style={styles.statCol}>
+            <View style={[styles.statIconBox, { backgroundColor: COLORS.warningLight }]}>
+              <Ionicons name="newspaper-outline" size={16} color={COLORS.warning} />
+            </View>
+            <AppText variant="h3" color={COLORS.warning}>{history?.posts?.length ?? 0}</AppText>
+            <AppText variant="caption" color={COLORS.textMuted} style={{ fontSize: 11 }}>Bài viết</AppText>
+          </View>
+
+          <View style={styles.statCol}>
+            <View style={[styles.statIconBox, { backgroundColor: COLORS.dangerLight }]}>
+              <Ionicons name="heart-outline" size={16} color={COLORS.danger} />
+            </View>
+            <AppText variant="h3" color={COLORS.danger}>{memberCount}</AppText>
+            <AppText variant="caption" color={COLORS.textMuted} style={{ fontSize: 11 }}>Nhân khẩu</AppText>
+          </View>
+
+          <View style={styles.statCol}>
+            <View style={[styles.statIconBox, { backgroundColor: COLORS.secondaryLight }]}>
+              <Ionicons name="calendar-outline" size={16} color={COLORS.secondary} />
+            </View>
+            <AppText variant="h3" color={COLORS.secondary}>{history?.events?.length ?? 0}</AppText>
+            <AppText variant="caption" color={COLORS.textMuted} style={{ fontSize: 11 }}>Sự kiện</AppText>
+          </View>
+        </AppCard>
+
+        {/* Quick Call Leader Card */}
+        <AppCard style={styles.leaderCallCard}>
+          <View style={[styles.menuIconBox, { backgroundColor: COLORS.primaryLight }]}>
+            <Ionicons name="call-outline" size={18} color={COLORS.primary} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <AppText variant="body" semibold>Tổ Trưởng TDP</AppText>
+              <Badge label="Trực ban 24/7" tone="warning" />
+            </View>
+            <AppText variant="caption" color={COLORS.primary}>024.3833.91xx</AppText>
+          </View>
+          <TouchableOpacity
+            onPress={() => Linking.openURL('tel:0912345678')}
+            style={styles.callNowBtn}
+          >
+            <Ionicons name="call" size={14} color={COLORS.textInverse} />
+            <AppText variant="label" color={COLORS.textInverse} style={{ marginLeft: 4 }}>
+              Gọi ngay
+            </AppText>
+          </TouchableOpacity>
+        </AppCard>
+
+        {/* Hộ gia đình & Cộng đồng */}
+        <View style={styles.groupHeaderRow}>
+          <AppText variant="label" color={COLORS.primary}>HỘ GIA ĐÌNH & CỘNG ĐỒNG</AppText>
+          <Badge label={household ? `Mã ${household.code}` : 'Cư dân'} tone="warning" />
+        </View>
+
+        <AppCard style={styles.section}>
           {household ? (
             <View style={styles.memberList}>
               {(household.members ?? []).map((m: any) => (
@@ -261,84 +281,83 @@ export default function ProfileScreen() {
               Tài khoản chưa được liên kết vào sổ hộ gia đình nào.
             </AppText>
           )}
+
+          {isOfficer && (
+            <TouchableOpacity
+              style={[styles.menuRow, styles.dividerTop]}
+              onPress={() => router.push('/(tabs)/residents')}
+            >
+              <View style={styles.menuLeft}>
+                <View style={[styles.menuIconBox, { backgroundColor: COLORS.primaryLight }]}>
+                  <Ionicons name="people-outline" size={18} color={COLORS.primary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <AppText variant="body" semibold>Quản lý Cư dân & Hộ gia đình</AppText>
+                  <AppText variant="caption" color={COLORS.textMuted}>Cổng công vụ Tổ trưởng / Cán bộ</AppText>
+                </View>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={COLORS.textMuted} />
+            </TouchableOpacity>
+          )}
         </AppCard>
 
-        {/* 2-Column Activity Summary (Phản ánh & Hoạt động - KHÔNG có Đóng phí) */}
-        <View style={styles.twoColStats}>
-          <AppCard style={styles.statCard}>
-            <View style={[styles.menuIconBox, { backgroundColor: COLORS.primaryLight }]}>
-              <Ionicons name="megaphone-outline" size={18} color={COLORS.primary} />
-            </View>
-            <AppText variant="h3" style={{ marginTop: 8 }}>Phản ánh</AppText>
-            <AppText variant="caption" color={COLORS.textMuted}>
-              {history?.reports?.length ?? 0} hồ sơ đã gửi
-            </AppText>
-          </AppCard>
+        {/* Cài đặt & Bảo mật */}
+        <AppText variant="label" color={COLORS.danger} style={{ marginTop: 4 }}>
+          CÀI ĐẶT & BẢO MẬT
+        </AppText>
 
-          <AppCard style={styles.statCard}>
-            <View style={[styles.menuIconBox, { backgroundColor: COLORS.secondaryLight }]}>
-              <Ionicons name="calendar-outline" size={18} color={COLORS.secondary} />
-            </View>
-            <AppText variant="h3" style={{ marginTop: 8 }}>Hoạt động</AppText>
-            <AppText variant="caption" color={COLORS.textMuted}>
-              {history?.posts?.length ?? 0} bài • {history?.events?.length ?? 0} sự kiện
-            </AppText>
-          </AppCard>
-        </View>
-
-        {/* Thông báo & Quyền riêng tư */}
         <AppCard style={styles.section}>
-          <AppText variant="h3" style={styles.sectionTitle}>
-            Thông báo & Quyền riêng tư
-          </AppText>
           <View style={styles.switchRow}>
             <View style={styles.switchLabelWrap}>
-              <Ionicons name="notifications-outline" size={18} color={COLORS.primary} />
+              <View style={[styles.menuIconBox, { backgroundColor: COLORS.warningLight }]}>
+                <Ionicons name="notifications-outline" size={18} color={COLORS.warning} />
+              </View>
               <AppText variant="body" style={{ marginLeft: 10 }}>Nhận thông báo khẩn từ tổ</AppText>
             </View>
             <Switch
               value={settings?.pushAnnouncements ?? true}
               onValueChange={(val) => updateSettings.mutate({ pushAnnouncements: val })}
-              trackColor={{ true: COLORS.primary }}
+              trackColor={{ false: COLORS.border, true: COLORS.primary }}
             />
           </View>
+
           <View style={styles.switchRow}>
             <View style={styles.switchLabelWrap}>
-              <Ionicons name="chatbubble-ellipses-outline" size={18} color={COLORS.primary} />
+              <View style={[styles.menuIconBox, { backgroundColor: COLORS.secondaryLight }]}>
+                <Ionicons name="chatbubble-ellipses-outline" size={18} color={COLORS.secondary} />
+              </View>
               <AppText variant="body" style={{ marginLeft: 10 }}>Nhận tin nhắn mới</AppText>
             </View>
             <Switch
               value={settings?.pushMessages ?? true}
               onValueChange={(val) => updateSettings.mutate({ pushMessages: val })}
-              trackColor={{ true: COLORS.primary }}
+              trackColor={{ false: COLORS.border, true: COLORS.primary }}
             />
           </View>
+
           <View style={styles.switchRow}>
             <View style={styles.switchLabelWrap}>
-              <Ionicons name="call-outline" size={18} color={COLORS.primary} />
+              <View style={[styles.menuIconBox, { backgroundColor: COLORS.primaryLight }]}>
+                <Ionicons name="call-outline" size={18} color={COLORS.primary} />
+              </View>
               <AppText variant="body" style={{ marginLeft: 10 }}>Hiển thị SĐT với cư dân khác</AppText>
             </View>
             <Switch
               value={settings?.showPhoneNumber ?? false}
               onValueChange={(val) => updateSettings.mutate({ showPhoneNumber: val })}
-              trackColor={{ true: COLORS.primary }}
+              trackColor={{ false: COLORS.border, true: COLORS.primary }}
             />
           </View>
-        </AppCard>
 
-        {/* Bảo mật & Tài khoản */}
-        <AppCard style={styles.section}>
           <TouchableOpacity
-            style={styles.menuRow}
+            style={[styles.menuRow, styles.dividerTop]}
             onPress={() => setShowPwdForm(!showPwdForm)}
           >
             <View style={styles.menuLeft}>
-              <View style={[styles.menuIconBox, { backgroundColor: COLORS.surfaceAlt }]}>
-                <Ionicons name="key-outline" size={18} color={COLORS.textPrimary} />
+              <View style={[styles.menuIconBox, { backgroundColor: COLORS.primaryLight }]}>
+                <Ionicons name="key-outline" size={18} color={COLORS.primary} />
               </View>
-              <AppText variant="body" semibold>
-                Đổi mật khẩu tài khoản
-              </AppText>
+              <AppText variant="body" semibold>Đổi mật khẩu tài khoản</AppText>
             </View>
             <Ionicons name={showPwdForm ? 'chevron-up' : 'chevron-down'} size={18} color={COLORS.textMuted} />
           </TouchableOpacity>
@@ -348,6 +367,7 @@ export default function ProfileScreen() {
               <TextInput
                 style={styles.input}
                 placeholder="Mật khẩu cũ"
+                placeholderTextColor={COLORS.textMuted}
                 secureTextEntry
                 value={oldPassword}
                 onChangeText={setOldPassword}
@@ -355,6 +375,7 @@ export default function ProfileScreen() {
               <TextInput
                 style={styles.input}
                 placeholder="Mật khẩu mới (>= 6 ký tự)"
+                placeholderTextColor={COLORS.textMuted}
                 secureTextEntry
                 value={newPassword}
                 onChangeText={setNewPassword}
@@ -381,25 +402,17 @@ export default function ProfileScreen() {
             </View>
             <Ionicons name="chevron-forward" size={18} color={COLORS.textMuted} />
           </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.menuRow, styles.dividerTop]}
-            onPress={handleLogout}
-          >
-            <View style={styles.menuLeft}>
-              <View style={[styles.menuIconBox, { backgroundColor: COLORS.dangerLight }]}>
-                <Ionicons name="log-out-outline" size={18} color={COLORS.danger} />
-              </View>
-              <AppText variant="body" color={COLORS.danger} semibold>
-                Đăng xuất tài khoản
-              </AppText>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color={COLORS.textMuted} />
-          </TouchableOpacity>
         </AppCard>
 
+        <TouchableOpacity onPress={handleLogout} style={styles.logoutBtn}>
+          <Ionicons name="log-out-outline" size={18} color="#FECDD3" />
+          <AppText variant="body" semibold color="#FECDD3" style={{ marginLeft: 8 }}>
+            Đăng xuất tài khoản
+          </AppText>
+        </TouchableOpacity>
+
         <AppText variant="caption" color={COLORS.textMuted} style={styles.footerCaption}>
-          Ứng dụng Quản trị Dân cư Số • Smart Neighborhood
+          Smart Neighborhood • Số hóa Tổ dân phố Việt Nam
         </AppText>
       </ScrollView>
     </SafeAreaView>
@@ -414,7 +427,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: SPACING.lg,
     paddingVertical: SPACING.md,
-    backgroundColor: COLORS.surface,
+    backgroundColor: '#14100E',
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
   },
@@ -424,6 +437,8 @@ const styles = StyleSheet.create({
     height: 36,
     borderRadius: 10,
     backgroundColor: COLORS.primaryLight,
+    borderWidth: 1,
+    borderColor: COLORS.primarySoft,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -431,51 +446,89 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: RADIUS.full,
-    backgroundColor: COLORS.surfaceAlt,
+    backgroundColor: COLORS.warningLight,
+    borderWidth: 1,
+    borderColor: '#5C3D12',
     alignItems: 'center',
     justifyContent: 'center',
   },
   content: { padding: SPACING.lg, gap: SPACING.md, paddingBottom: 40 },
 
-  heroCard: { gap: SPACING.md },
-  heroTopRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.md },
-  avatarWrap: { position: 'relative' },
-  verifiedTick: {
-    position: 'absolute',
-    right: 0,
-    bottom: 0,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: COLORS.primary,
-    borderWidth: 2,
-    borderColor: COLORS.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
+  vneidHeroCard: {
+    borderRadius: RADIUS.xl,
+    padding: SPACING.lg,
+    backgroundColor: '#B91C1C',
+    borderWidth: 1,
+    borderColor: '#F97316',
+    gap: SPACING.md,
   },
-  heroInfo: { flex: 1 },
-  heroBtnRow: { flexDirection: 'row', gap: SPACING.sm },
-  qrBtn: {
-    flex: 1,
+  vneidTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  vneidVerifiedPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.primary,
-    paddingVertical: 10,
-    borderRadius: RADIUS.lg,
+    backgroundColor: 'rgba(18, 15, 13, 0.55)',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: RADIUS.full,
   },
-  editBtn: {
-    flex: 1,
+  qrPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.primaryLight,
-    paddingVertical: 10,
-    borderRadius: RADIUS.lg,
+    backgroundColor: 'rgba(18, 15, 13, 0.85)',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: RADIUS.md,
+  },
+  heroUserRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.md },
+  codeTag: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(18, 15, 13, 0.45)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: RADIUS.sm,
+    marginTop: 6,
+  },
+  addressBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(18, 15, 13, 0.4)',
+    paddingHorizontal: SPACING.md,
+    paddingVertical: 8,
+    borderRadius: RADIUS.md,
   },
 
+  statsCard: { flexDirection: 'row', justifyContent: 'space-between', padding: SPACING.md },
+  statCol: { flex: 1, alignItems: 'center', gap: 4 },
+  statIconBox: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  leaderCallCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    padding: SPACING.md,
+  },
+  callNowBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: RADIUS.md,
+  },
+
+  groupHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 4,
+  },
   section: { gap: SPACING.sm },
-  sectionTitle: { marginBottom: 4, fontSize: 16 },
   menuRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -484,8 +537,8 @@ const styles = StyleSheet.create({
   },
   menuLeft: { flexDirection: 'row', alignItems: 'center', gap: SPACING.md, flex: 1 },
   menuIconBox: {
-    width: 36,
-    height: 36,
+    width: 34,
+    height: 34,
     borderRadius: RADIUS.md,
     alignItems: 'center',
     justifyContent: 'center',
@@ -497,13 +550,6 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
 
-  householdHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 4,
-  },
-  householdTitleRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
   memberList: { gap: SPACING.sm },
   memberCardRow: {
     flexDirection: 'row',
@@ -523,9 +569,6 @@ const styles = StyleSheet.create({
   },
   memberNameLine: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
 
-  twoColStats: { flexDirection: 'row', gap: SPACING.md },
-  statCard: { flex: 1, padding: SPACING.md },
-
   switchRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -537,11 +580,23 @@ const styles = StyleSheet.create({
   pwdForm: { gap: SPACING.sm, marginTop: SPACING.xs },
   input: {
     backgroundColor: COLORS.surfaceAlt,
+    borderWidth: 1,
+    borderColor: COLORS.border,
     borderRadius: RADIUS.md,
     paddingHorizontal: SPACING.md,
     paddingVertical: 10,
     fontSize: 15,
     color: COLORS.textPrimary,
+  },
+  logoutBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#5B1420',
+    borderWidth: 1,
+    borderColor: '#9F1239',
+    paddingVertical: 13,
+    borderRadius: RADIUS.lg,
   },
   footerCaption: { textAlign: 'center', marginTop: 4 },
 });

@@ -31,7 +31,7 @@ import { formatRelativeTimeVi } from '@/utils/date';
 const FILTERS: { key: FeedFilterType; label: string }[] = [
   { key: 'ALL', label: 'Tất cả' },
   { key: 'OFFICIAL', label: 'Ban điều hành' },
-  { key: 'WARNING', label: 'Cảnh báo' },
+  { key: 'WARNING', label: 'Cảnh báo khẩn' },
   { key: 'LIFE', label: 'Đời sống' },
   { key: 'PINNED', label: 'Đã ghim' },
 ];
@@ -61,7 +61,7 @@ export default function FeedScreen() {
 
   const handleSOS = () => {
     Alert.alert(
-      'Hỗ trợ khẩn cấp SOS',
+      'Hỗ trợ khẩn cấp & Loa phường',
       'Chọn kênh liên hệ khẩn cấp của Tổ dân phố:',
       [
         { text: 'Gọi Công an phường (113)', onPress: () => Linking.openURL('tel:113') },
@@ -86,269 +86,116 @@ export default function FeedScreen() {
     ]);
   };
 
-  const renderStitchHomeHeader = () => (
+  const renderEspressoHeader = () => (
     <View style={styles.homeHeaderContainer}>
-      {/* Welcome & VNeID Verified Card */}
-      <AppCard style={styles.welcomeCard}>
-        <View style={styles.welcomeRow}>
-          <View style={styles.welcomeLeft}>
-            <View style={styles.welcomeNameRow}>
-              <AppText variant="h3" numberOfLines={1} style={styles.welcomeName}>
-                Xin chào, {user?.fullName || 'Cư dân'}
-              </AppText>
-              <Ionicons name="checkmark-circle" size={16} color={COLORS.primary} />
-            </View>
-            <View style={styles.welcomeUnitRow}>
-              <Ionicons name="business-outline" size={13} color={COLORS.textMuted} />
-              <AppText variant="caption" color={COLORS.textSecondary} numberOfLines={1} style={{ marginLeft: 4 }}>
-                {user?.neighborhoodName || 'Tổ 12 - P. Yên Hòa'} • Cư dân số
-              </AppText>
-            </View>
-          </View>
-          <View style={styles.vneidPill}>
-            <Ionicons name="shield-checkmark-outline" size={14} color={COLORS.primary} />
-            <AppText variant="label" color={COLORS.primary} style={{ marginLeft: 4 }}>
-              Đã định danh
-            </AppText>
-          </View>
+      {/* Phát thanh nội bộ */}
+      <AppCard style={styles.broadcastCard}>
+        <View style={styles.broadcastIconCircle}>
+          <Ionicons name="volume-high" size={18} color={COLORS.warning} />
         </View>
-      </AppCard>
-
-      {/* Emergency Quick Bar */}
-      <View style={styles.emergencyBanner}>
-        <View style={styles.emergencyLeft}>
-          <View style={styles.emergencyIconCircle}>
-            <Ionicons name="call" size={16} color={COLORS.textInverse} />
+        <View style={{ flex: 1 }}>
+          <View style={styles.broadcastLabelRow}>
+            <AppText variant="label" color={COLORS.warning}>
+              PHÁT THANH NỘI BỘ
+            </AppText>
+            <View style={styles.liveDot} />
           </View>
-          <View style={{ flex: 1 }}>
-            <AppText variant="label" color={COLORS.danger} numberOfLines={1}>
-              Khẩn cấp khu phố
-            </AppText>
-            <AppText variant="caption" color={COLORS.textSecondary} numberOfLines={1}>
-              Hỗ trợ trật tự & sự cố 24/7
-            </AppText>
-          </View>
-        </View>
-        <View style={styles.emergencyActions}>
-          <TouchableOpacity
-            onPress={() => Linking.openURL('tel:113')}
-            style={styles.policeBtn}
-          >
-            <Ionicons name="shield-outline" size={13} color={COLORS.danger} />
-            <AppText variant="label" color={COLORS.danger} style={{ marginLeft: 3 }}>
-              Công an
-            </AppText>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => router.push('/(tabs)/connect' as any)}
-            style={styles.leaderBtn}
-          >
-            <Ionicons name="call-outline" size={13} color={COLORS.textInverse} />
-            <AppText variant="label" color={COLORS.textInverse} style={{ marginLeft: 3 }}>
-              Tổ trưởng
-            </AppText>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* 2-Column Action Cards */}
-      <View style={styles.twoColRow}>
-        <AppCard style={styles.halfCard}>
-          <View style={styles.halfCardHeader}>
-            <AppText variant="caption" color={COLORS.textSecondary}>
-              Phản ánh & Kiến nghị
-            </AppText>
-            <View style={[styles.miniIconBadge, { backgroundColor: COLORS.primaryLight }]}>
-              <Ionicons name="megaphone-outline" size={14} color={COLORS.primary} />
-            </View>
-          </View>
-          <AppText variant="h3" style={styles.halfCardTitle}>
-            {reports.length} Phản ánh
+          <AppText variant="caption" color={COLORS.textSecondary} numberOfLines={1}>
+            Lịch thu gom rác tái chế: Thứ 3 - Thứ 5 - Thứ 7 (19:30)
           </AppText>
-          <AppText variant="caption" color={COLORS.textMuted} numberOfLines={2} style={styles.halfCardDesc}>
-            Theo dõi tiến độ xử lý hạ tầng, đèn đường, vệ sinh khu phố.
-          </AppText>
-          <TouchableOpacity
-            onPress={() => setTab('REPORTS')}
-            style={styles.halfPrimaryBtn}
-          >
-            <AppText variant="label" color={COLORS.textInverse}>
-              Xem phản ánh
-            </AppText>
-            <Ionicons name="arrow-forward" size={14} color={COLORS.textInverse} style={{ marginLeft: 4 }} />
-          </TouchableOpacity>
-        </AppCard>
-
-        <AppCard style={styles.halfCard}>
-          <View style={styles.halfCardHeader}>
-            <AppText variant="caption" color={COLORS.textSecondary}>
-              An toàn khu phố
-            </AppText>
-            <View style={[styles.miniIconBadge, { backgroundColor: COLORS.secondaryLight }]}>
-              <Ionicons name="shield-checkmark-outline" size={14} color={COLORS.secondary} />
-            </View>
-          </View>
-          <AppText variant="h3" style={styles.halfCardTitle}>
-            Khu vực an toàn
-          </AppText>
-          <AppText variant="caption" color={COLORS.textMuted} numberOfLines={2} style={styles.halfCardDesc}>
-            Tuần tra dân phòng ca đêm duy trì 22:00 - 05:00 hằng ngày.
-          </AppText>
-          <TouchableOpacity
-            onPress={() => router.push('/(tabs)/notice' as any)}
-            style={styles.halfOutlineBtn}
-          >
-            <AppText variant="label" color={COLORS.primary}>
-              Xem thông báo
-            </AppText>
-            <Ionicons name="notifications-outline" size={13} color={COLORS.primary} style={{ marginLeft: 4 }} />
-          </TouchableOpacity>
-        </AppCard>
-      </View>
-
-      {/* Dịch vụ cư dân (4-column grid) */}
-      <View style={styles.serviceSection}>
-        <View style={styles.sectionHeaderRow}>
-          <AppText variant="h3">Dịch vụ cư dân</AppText>
-          <TouchableOpacity onPress={() => router.push('/(tabs)/notice' as any)}>
-            <AppText variant="caption" semibold color={COLORS.primary}>
-              Tất cả tiện ích
-            </AppText>
-          </TouchableOpacity>
-        </View>
-        <View style={styles.serviceGrid}>
-          <TouchableOpacity
-            onPress={() => router.push('/(tabs)/feed/report-create' as any)}
-            style={styles.serviceItem}
-          >
-            <View style={styles.serviceIconBox}>
-              <Ionicons name="camera-outline" size={22} color={COLORS.primary} />
-            </View>
-            <AppText variant="caption" semibold style={styles.serviceLabel}>
-              Gửi phản ánh
-            </AppText>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => router.push('/(tabs)/feed/create')}
-            style={styles.serviceItem}
-          >
-            <View style={styles.serviceIconBox}>
-              <Ionicons name="create-outline" size={22} color={COLORS.primary} />
-            </View>
-            <AppText variant="caption" semibold style={styles.serviceLabel}>
-              Đăng bài viết
-            </AppText>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => router.push('/(tabs)/connect' as any)}
-            style={styles.serviceItem}
-          >
-            <View style={styles.serviceIconBox}>
-              <Ionicons name="chatbubbles-outline" size={22} color={COLORS.primary} />
-            </View>
-            <AppText variant="caption" semibold style={styles.serviceLabel}>
-              Hỏi Tổ trưởng
-            </AppText>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => router.push('/(tabs)/profile' as any)}
-            style={styles.serviceItem}
-          >
-            <View style={styles.serviceIconBox}>
-              <Ionicons name="id-card-outline" size={22} color={COLORS.primary} />
-            </View>
-            <AppText variant="caption" semibold style={styles.serviceLabel}>
-              Sổ hộ khẩu
-            </AppText>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.infoTipBanner}>
-          <Ionicons name="information-circle-outline" size={18} color={COLORS.primary} />
-          <AppText variant="caption" color={COLORS.textSecondary} style={{ flex: 1, marginLeft: 8 }}>
-            Lịch thu gom rác tái chế tuần này: <AppText variant="caption" semibold>Thứ 3 - Thứ 5 - Thứ 7 (19:30)</AppText>
-          </AppText>
-        </View>
-      </View>
-
-      {/* Nhịp sống khu dân cư Header */}
-      <View style={styles.feedTitleRow}>
-        <View style={styles.feedTitleLeft}>
-          <AppText variant="h3">Nhịp sống khu dân cư</AppText>
-          <View style={styles.newPill}>
-            <AppText variant="label" color={COLORS.primary}>
-              Mới
-            </AppText>
-          </View>
         </View>
         <TouchableOpacity
-          onPress={() => router.push('/(tabs)/feed/create')}
-          style={styles.createPillBtn}
+          onPress={() => router.push('/(tabs)/notice' as any)}
+          style={styles.listenPill}
         >
-          <Ionicons name="create-outline" size={14} color={COLORS.textInverse} />
-          <AppText variant="label" color={COLORS.textInverse} style={{ marginLeft: 4 }}>
-            Đăng bài
+          <AppText variant="label" color={COLORS.primary}>
+            Nghe
           </AppText>
+          <Ionicons name="play" size={11} color={COLORS.primary} style={{ marginLeft: 4 }} />
         </TouchableOpacity>
-      </View>
-    </View>
-  );
+      </AppCard>
 
-  const renderBottomCta = () => (
-    <View style={styles.bottomCtaBanner}>
-      <View style={{ flex: 1, paddingRight: SPACING.sm }}>
-        <AppText variant="body" semibold color={COLORS.textInverse}>
-          Bạn phát hiện vấn đề đô thị?
-        </AppText>
-        <AppText variant="caption" color="#DBEAFE">
-          Đèn đường hỏng, rác thải tồn đọng...
-        </AppText>
-      </View>
-      <TouchableOpacity
-        onPress={() => router.push('/(tabs)/feed/report-create' as any)}
-        style={styles.bottomCtaBtn}
-      >
-        <Ionicons name="camera-outline" size={16} color={COLORS.primary} />
-        <AppText variant="label" color={COLORS.primary} style={{ marginLeft: 5 }}>
-          Chụp gửi ngay
-        </AppText>
-      </TouchableOpacity>
+      {/* Quick Composer Box */}
+      <AppCard style={styles.composerCard}>
+        <TouchableOpacity
+          activeOpacity={0.85}
+          onPress={() => router.push('/(tabs)/feed/create')}
+          style={styles.composerInputRow}
+        >
+          <Avatar
+            name={user?.fullName || 'CD'}
+            uri={user?.avatarUrl}
+            size={38}
+            isOfficial={isOfficer}
+          />
+          <View style={styles.composerPlaceholder}>
+            <AppText variant="body" color={COLORS.textMuted} numberOfLines={1}>
+              Hôm nay khu phố ta có tin gì mới, {user?.fullName?.split(' ').pop() || 'bạn'}?
+            </AppText>
+          </View>
+        </TouchableOpacity>
+
+        <View style={styles.composerActionsRow}>
+          <TouchableOpacity
+            onPress={() => router.push('/(tabs)/feed/create')}
+            style={[styles.composerPill, { borderColor: '#134E4A', backgroundColor: COLORS.secondaryLight }]}
+          >
+            <Ionicons name="images-outline" size={15} color={COLORS.secondary} />
+            <AppText variant="caption" semibold color={COLORS.secondary} style={{ marginLeft: 5 }}>
+              Ảnh/Video
+            </AppText>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => router.push('/(tabs)/feed/report-create' as any)}
+            style={[styles.composerPill, { borderColor: '#4C1D24', backgroundColor: COLORS.dangerLight }]}
+          >
+            <Ionicons name="warning-outline" size={15} color={COLORS.danger} />
+            <AppText variant="caption" semibold color={COLORS.danger} style={{ marginLeft: 5 }}>
+              Báo sự cố
+            </AppText>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => router.push('/(tabs)/connect' as any)}
+            style={[styles.composerPill, { borderColor: COLORS.primarySoft, backgroundColor: COLORS.primaryLight }]}
+          >
+            <Ionicons name="chatbubbles-outline" size={15} color={COLORS.primary} />
+            <AppText variant="caption" semibold color={COLORS.primary} style={{ marginLeft: 5 }}>
+              Kết nối
+            </AppText>
+          </TouchableOpacity>
+        </View>
+      </AppCard>
     </View>
   );
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Stitch Top App Bar */}
+      {/* Espresso Dark Top Header */}
       <View style={styles.topHeader}>
         <View style={styles.headerLeft}>
           <View style={styles.brandIconBox}>
             <Ionicons name="business" size={18} color={COLORS.primary} />
           </View>
           <View style={{ flex: 1 }}>
-            <AppText variant="body" semibold numberOfLines={1}>
-              {user?.neighborhoodName || 'Tổ 12 - P. Yên Hòa'}
-            </AppText>
+            <View style={styles.brandTitleRow}>
+              <AppText variant="label" color={COLORS.textPrimary} style={{ fontSize: 13 }}>
+                SMART{' '}
+              </AppText>
+              <AppText variant="label" color={COLORS.warning} style={{ fontSize: 13 }}>
+                NEIGHBORHOOD
+              </AppText>
+            </View>
             <AppText variant="caption" color={COLORS.textMuted} numberOfLines={1}>
-              Cầu Giấy, Hà Nội
+              {user?.neighborhoodName || 'Tổ dân phố 12 - P. Dịch Vọng Hậu'}
             </AppText>
           </View>
         </View>
 
         <View style={styles.headerRight}>
-          <TouchableOpacity onPress={handleSOS} style={styles.sosBtn}>
-            <AppText variant="label" color={COLORS.textInverse}>
-              SOS
-            </AppText>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => router.push('/(tabs)/notice' as any)}
-            style={styles.bellBtn}
-          >
-            <Ionicons name="notifications-outline" size={20} color={COLORS.textPrimary} />
-            <View style={styles.bellDot} />
+          <TouchableOpacity onPress={handleSOS} style={styles.sosIconBtn}>
+            <Ionicons name="megaphone-outline" size={18} color={COLORS.warning} />
           </TouchableOpacity>
           <TouchableOpacity onPress={() => router.push('/(tabs)/profile' as any)}>
             <Avatar
@@ -367,7 +214,7 @@ export default function FeedScreen() {
           onPress={() => setTab('POSTS')}
           style={[styles.segmentBtn, tab === 'POSTS' && styles.segmentActive]}
         >
-          <AppText variant="body" semibold={tab === 'POSTS'} color={tab === 'POSTS' ? COLORS.primary : COLORS.textSecondary}>
+          <AppText variant="body" semibold={tab === 'POSTS'} color={tab === 'POSTS' ? COLORS.primary : COLORS.textMuted}>
             Bảng tin
           </AppText>
         </TouchableOpacity>
@@ -375,8 +222,8 @@ export default function FeedScreen() {
           onPress={() => setTab('REPORTS')}
           style={[styles.segmentBtn, tab === 'REPORTS' && styles.segmentActive]}
         >
-          <AppText variant="body" semibold={tab === 'REPORTS'} color={tab === 'REPORTS' ? COLORS.primary : COLORS.textSecondary}>
-            Phản ánh ({reports.length})
+          <AppText variant="body" semibold={tab === 'REPORTS'} color={tab === 'REPORTS' ? COLORS.primary : COLORS.textMuted}>
+            Phản ánh sự cố ({reports.length})
           </AppText>
         </TouchableOpacity>
       </View>
@@ -385,10 +232,10 @@ export default function FeedScreen() {
         <>
           <View style={styles.filterSection}>
             <View style={styles.searchBox}>
-              <Ionicons name="search-outline" size={18} color={COLORS.textMuted} />
+              <Ionicons name="search-outline" size={17} color={COLORS.textMuted} />
               <TextInput
                 style={styles.searchInput}
-                placeholder="Tìm kiếm bài viết, thông báo..."
+                placeholder="Tìm bài viết, thông báo, sự cố, tác giả..."
                 placeholderTextColor={COLORS.textMuted}
                 value={search}
                 onChangeText={setSearch}
@@ -416,7 +263,7 @@ export default function FeedScreen() {
                     <AppText
                       variant="caption"
                       semibold={active}
-                      color={active ? COLORS.textInverse : COLORS.textSecondary}
+                      color={active ? COLORS.primary : COLORS.textSecondary}
                     >
                       {item.label}
                     </AppText>
@@ -435,10 +282,9 @@ export default function FeedScreen() {
               data={posts}
               keyExtractor={(item) => item.id}
               contentContainerStyle={styles.listContent}
-              ListHeaderComponent={renderStitchHomeHeader}
-              ListFooterComponent={renderBottomCta}
+              ListHeaderComponent={renderEspressoHeader}
               refreshControl={
-                <RefreshControl refreshing={isRefetching} onRefresh={refetch} colors={[COLORS.primary]} />
+                <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.primary} />
               }
               renderItem={({ item }) => (
                 <FeedPostCard
@@ -475,14 +321,14 @@ export default function FeedScreen() {
               onPress={() => router.push('/(tabs)/feed/report-create' as any)}
               style={styles.createReportWideBtn}
             >
-              <Ionicons name="add-circle-outline" size={20} color={COLORS.textInverse} />
+              <Ionicons name="warning-outline" size={18} color={COLORS.textInverse} />
               <AppText variant="body" semibold color={COLORS.textInverse} style={{ marginLeft: 8 }}>
-                Tạo phản ánh mới (Camera & GPS)
+                Báo sự cố mới (Camera & GPS)
               </AppText>
             </TouchableOpacity>
           }
           refreshControl={
-            <RefreshControl refreshing={false} onRefresh={refetchReports} colors={[COLORS.primary]} />
+            <RefreshControl refreshing={false} onRefresh={refetchReports} tintColor={COLORS.primary} />
           }
           renderItem={({ item }) => {
             const st = STATUS_BADGE[item.status] || { label: item.status, tone: 'neutral' };
@@ -498,7 +344,7 @@ export default function FeedScreen() {
                   {item.title}
                 </AppText>
                 <View style={styles.reportLocationRow}>
-                  <Ionicons name="location-outline" size={14} color={COLORS.textMuted} />
+                  <Ionicons name="location-outline" size={14} color={COLORS.danger} />
                   <AppText variant="caption" color={COLORS.textSecondary} style={{ marginLeft: 4 }}>
                     {item.addressText || 'Chưa gắn địa chỉ'}
                   </AppText>
@@ -533,6 +379,24 @@ export default function FeedScreen() {
           }
         />
       )}
+
+      {/* Stitch Floating + Đăng bài Cyan Pill */}
+      <TouchableOpacity
+        activeOpacity={0.85}
+        onPress={() =>
+          router.push(
+            tab === 'POSTS'
+              ? '/(tabs)/feed/create'
+              : ('/(tabs)/feed/report-create' as any),
+          )
+        }
+        style={styles.fab}
+      >
+        <Ionicons name="add" size={20} color={COLORS.textInverse} />
+        <AppText variant="label" color={COLORS.textInverse} style={{ marginLeft: 4, fontSize: 13 }}>
+          {tab === 'POSTS' ? 'Đăng bài' : 'Báo sự cố'}
+        </AppText>
+      </TouchableOpacity>
     </SafeAreaView>
   );
 }
@@ -545,7 +409,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: SPACING.lg,
     paddingVertical: SPACING.md,
-    backgroundColor: COLORS.surface,
+    backgroundColor: '#14100E',
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
   },
@@ -555,37 +419,26 @@ const styles = StyleSheet.create({
     height: 36,
     borderRadius: 10,
     backgroundColor: COLORS.primaryLight,
+    borderWidth: 1,
+    borderColor: COLORS.primarySoft,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  brandTitleRow: { flexDirection: 'row', alignItems: 'center' },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
-  sosBtn: {
-    backgroundColor: COLORS.danger,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: RADIUS.md,
-  },
-  bellBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: RADIUS.full,
-    backgroundColor: COLORS.surfaceAlt,
+  sosIconBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: COLORS.warningLight,
+    borderWidth: 1,
+    borderColor: '#5C3D12',
     alignItems: 'center',
     justifyContent: 'center',
-    position: 'relative',
-  },
-  bellDot: {
-    position: 'absolute',
-    top: 7,
-    right: 8,
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-    backgroundColor: COLORS.danger,
   },
   segmentRow: {
     flexDirection: 'row',
-    backgroundColor: COLORS.surface,
+    backgroundColor: '#14100E',
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
   },
@@ -598,192 +451,86 @@ const styles = StyleSheet.create({
   },
   segmentActive: { borderBottomColor: COLORS.primary },
   filterSection: {
-    backgroundColor: COLORS.surface,
+    backgroundColor: COLORS.background,
     paddingTop: SPACING.sm,
-    paddingBottom: SPACING.md,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    paddingBottom: SPACING.sm,
   },
   searchBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.surfaceAlt,
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.border,
     marginHorizontal: SPACING.lg,
     paddingHorizontal: SPACING.md,
-    borderRadius: RADIUS.lg,
+    borderRadius: RADIUS.full,
     height: 40,
     marginBottom: SPACING.sm,
   },
-  searchInput: { flex: 1, marginLeft: SPACING.sm, fontSize: 14, color: COLORS.textPrimary },
+  searchInput: { flex: 1, marginLeft: SPACING.sm, fontSize: 13, color: COLORS.textPrimary },
   chipRow: { paddingHorizontal: SPACING.lg, gap: SPACING.sm },
   chip: {
     paddingHorizontal: SPACING.md,
     paddingVertical: 6,
     borderRadius: RADIUS.full,
-    backgroundColor: COLORS.surfaceAlt,
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
-  chipActive: { backgroundColor: COLORS.primary },
-  listContent: { padding: SPACING.lg, paddingBottom: 40 },
+  chipActive: { backgroundColor: COLORS.primaryLight, borderColor: COLORS.primary },
+  listContent: { padding: SPACING.lg, paddingBottom: 90 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 
   homeHeaderContainer: { gap: SPACING.md, marginBottom: SPACING.md },
-  welcomeCard: { padding: SPACING.md },
-  welcomeRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: SPACING.sm },
-  welcomeLeft: { flex: 1 },
-  welcomeNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  welcomeName: { fontSize: 16, flexShrink: 1 },
-  welcomeUnitRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
-  vneidPill: {
+  broadcastCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: RADIUS.full,
-    backgroundColor: COLORS.primaryLight,
-    borderWidth: 1,
-    borderColor: COLORS.primarySoft,
-  },
-
-  emergencyBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: COLORS.dangerLight,
-    borderWidth: 1,
-    borderColor: '#FECACA',
-    borderRadius: RADIUS.xl,
     padding: SPACING.md,
     gap: SPACING.sm,
+    backgroundColor: COLORS.surface,
+    borderColor: '#453017',
   },
-  emergencyLeft: { flexDirection: 'row', alignItems: 'center', flex: 1, gap: SPACING.sm },
-  emergencyIconCircle: {
+  broadcastIconCircle: {
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: COLORS.danger,
+    backgroundColor: COLORS.warningLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  emergencyActions: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  policeBtn: {
+  broadcastLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.danger },
+  listenPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.surface,
+    backgroundColor: COLORS.primaryLight,
     borderWidth: 1,
-    borderColor: '#FCA5A5',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: RADIUS.full,
-  },
-  leaderBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primarySoft,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: RADIUS.full,
   },
 
-  twoColRow: { flexDirection: 'row', gap: SPACING.md },
-  halfCard: { flex: 1, padding: SPACING.md, justifyContent: 'space-between' },
-  halfCardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  miniIconBadge: {
-    width: 26,
-    height: 26,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  halfCardTitle: { fontSize: 16, marginTop: 6 },
-  halfCardDesc: { marginTop: 4, marginBottom: 10, lineHeight: 16 },
-  halfPrimaryBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.primary,
-    paddingVertical: 8,
-    borderRadius: RADIUS.md,
-  },
-  halfOutlineBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.surface,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    paddingVertical: 8,
-    borderRadius: RADIUS.md,
-  },
-
-  serviceSection: { gap: SPACING.sm },
-  sectionHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  serviceGrid: { flexDirection: 'row', justifyContent: 'space-between', gap: SPACING.sm },
-  serviceItem: {
+  composerCard: { padding: SPACING.md, gap: SPACING.md },
+  composerInputRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
+  composerPlaceholder: {
     flex: 1,
-    backgroundColor: COLORS.surface,
+    backgroundColor: COLORS.surfaceAlt,
+    borderRadius: RADIUS.full,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: 10,
     borderWidth: 1,
     borderColor: COLORS.border,
-    borderRadius: RADIUS.xl,
-    paddingVertical: SPACING.md,
-    paddingHorizontal: 4,
-    alignItems: 'center',
-    gap: 6,
   },
-  serviceIconBox: {
-    width: 40,
-    height: 40,
-    borderRadius: RADIUS.lg,
-    backgroundColor: COLORS.primaryLight,
+  composerActionsRow: { flexDirection: 'row', gap: SPACING.sm },
+  composerPill: {
+    flex: 1,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  serviceLabel: { textAlign: 'center', fontSize: 11 },
-  infoTipBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.primaryLight,
-    borderRadius: RADIUS.lg,
-    padding: SPACING.md,
-  },
-
-  feedTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 4,
-  },
-  feedTitleLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  newPill: {
-    backgroundColor: COLORS.primaryLight,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: RADIUS.full,
-  },
-  createPillBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
+    paddingVertical: 8,
     borderRadius: RADIUS.md,
-  },
-
-  bottomCtaBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: COLORS.primary,
-    borderRadius: RADIUS.xl,
-    padding: SPACING.lg,
-    marginTop: SPACING.md,
-  },
-  bottomCtaBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.surface,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-    borderRadius: RADIUS.lg,
+    borderWidth: 1,
   },
 
   createReportWideBtn: {
@@ -807,5 +554,18 @@ const styles = StyleSheet.create({
     paddingTop: SPACING.xs,
     borderTopWidth: 1,
     borderTopColor: COLORS.divider,
+  },
+
+  fab: {
+    position: 'absolute',
+    right: SPACING.lg,
+    bottom: SPACING.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: 11,
+    borderRadius: RADIUS.full,
+    elevation: 6,
   },
 });

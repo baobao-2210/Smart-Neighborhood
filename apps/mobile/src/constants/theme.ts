@@ -1,31 +1,31 @@
 export const COLORS = {
-  // Google Stitch "Smart Neighborhood Community App" Theme Tokens
-  primary: '#2563EB',
-  primaryLight: '#EFF6FF',
-  primarySoft: '#DBEAFE',
-  primaryDark: '#1D4ED8',
-  secondary: '#0D9488',
-  secondaryLight: '#F0FDFA',
-  accent: '#F59E0B',
+  // Google Stitch "Espresso Dark & Vibrant" Theme Tokens (project 15749099382889688163)
+  primary: '#22D3EE',       // Vibrant Cyan
+  primaryLight: '#102A33',  // Deep Cyan tint for pills/active tabs
+  primarySoft: '#164E63',
+  primaryDark: '#0891B2',
+  secondary: '#10B981',     // Vibrant Emerald
+  secondaryLight: '#0E2E26',
+  accent: '#F59E0B',        // Warm Amber/Gold
 
-  success: '#0D9488',
-  successLight: '#CCFBF1',
-  warning: '#D97706',
-  warningLight: '#FEF3C7',
-  danger: '#EF4444',
-  dangerLight: '#FEF2F2',
+  success: '#10B981',
+  successLight: '#0E2E26',
+  warning: '#F59E0B',
+  warningLight: '#33240F',
+  danger: '#F43F5E',        // Vibrant Rose/Red
+  dangerLight: '#36131D',
 
-  background: '#FAF8FF',
-  surface: '#FFFFFF',
-  surfaceAlt: '#F2F3FF',
+  background: '#120F0D',    // Espresso Dark Background
+  surface: '#1D1815',       // Espresso Card Surface
+  surfaceAlt: '#27201C',    // Espresso Input / Inner Card
 
-  textPrimary: '#131B2E',
-  textSecondary: '#475569',
-  textMuted: '#64748B',
-  textInverse: '#FFFFFF',
+  textPrimary: '#F5F5F4',   // Crisp Warm White
+  textSecondary: '#C4BBB4', // Soft Warm Gray
+  textMuted: '#8C827B',     // Muted Espresso Gray
+  textInverse: '#0B1115',   // Dark text on bright cyan buttons
 
-  border: '#E2E8F0',
-  divider: '#F1F5F9',
+  border: '#322924',        // Subtle Espresso Border
+  divider: '#29221E',
 } as const;
 
 export const SPACING = {
@@ -39,7 +39,7 @@ export const SPACING = {
 
 export const RADIUS = {
   sm: 6,
-  md: 8,   // ROUND_EIGHT from Google Stitch
+  md: 8,
   lg: 12,
   xl: 16,
   full: 9999,

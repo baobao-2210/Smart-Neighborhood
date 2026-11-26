@@ -338,12 +338,16 @@ const styles = StyleSheet.create({
   actionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: 6,
+    paddingHorizontal: SPACING.sm + 2,
+    paddingVertical: 7,
     borderRadius: RADIUS.md,
+    backgroundColor: COLORS.surfaceAlt,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   actionBtnActive: {
     backgroundColor: COLORS.primaryLight,
+    borderColor: COLORS.primarySoft,
   },
   actionLabel: {
     marginLeft: 4,
