@@ -1,30 +1,31 @@
 export const COLORS = {
   // Google Stitch "Smart Neighborhood Community App" Theme Tokens
   primary: '#2563EB',
-  primaryLight: '#DBE1FF',
-  primaryDark: '#004AC6',
+  primaryLight: '#EFF6FF',
+  primarySoft: '#DBEAFE',
+  primaryDark: '#1D4ED8',
   secondary: '#0D9488',
-  secondaryLight: '#E0F2F1',
-  accent: '#BC4800',
+  secondaryLight: '#F0FDFA',
+  accent: '#F59E0B',
 
   success: '#0D9488',
   successLight: '#CCFBF1',
-  warning: '#BC4800',
-  warningLight: '#FFEDE6',
-  danger: '#BA1A1A',
-  dangerLight: '#FFDAD6',
+  warning: '#D97706',
+  warningLight: '#FEF3C7',
+  danger: '#EF4444',
+  dangerLight: '#FEF2F2',
 
   background: '#FAF8FF',
   surface: '#FFFFFF',
   surfaceAlt: '#F2F3FF',
 
   textPrimary: '#131B2E',
-  textSecondary: '#434655',
-  textMuted: '#737686',
+  textSecondary: '#475569',
+  textMuted: '#64748B',
   textInverse: '#FFFFFF',
 
-  border: '#C3C6D7',
-  divider: '#EAEDFF',
+  border: '#E2E8F0',
+  divider: '#F1F5F9',
 } as const;
 
 export const SPACING = {

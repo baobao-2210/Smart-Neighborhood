@@ -13,10 +13,21 @@ export default function TabsLayout() {
         tabBarStyle: {
           backgroundColor: COLORS.surface,
           borderTopColor: COLORS.border,
-          height: 64,
-          paddingBottom: 8,
-          paddingTop: 6,
+          borderTopWidth: 1,
+          height: 68,
+          paddingBottom: 10,
+          paddingTop: 8,
+          elevation: 8,
+          shadowColor: '#0F172A',
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: 0.04,
+          shadowRadius: 8,
         },
+        tabBarItemStyle: {
+          borderRadius: 12,
+          marginHorizontal: 4,
+        },
+        tabBarActiveBackgroundColor: COLORS.primaryLight,
         tabBarLabelStyle: {
           fontSize: 11,
           fontWeight: '600',
@@ -27,8 +38,8 @@ export default function TabsLayout() {
         name="feed"
         options={{
           title: 'Bảng tin',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="newspaper-outline" size={size} color={color} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons name={focused ? 'grid' : 'grid-outline'} size={21} color={color} />
           ),
         }}
       />
@@ -36,8 +47,8 @@ export default function TabsLayout() {
         name="notice/index"
         options={{
           title: 'Thông báo',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="notifications-outline" size={size} color={color} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons name={focused ? 'notifications' : 'notifications-outline'} size={21} color={color} />
           ),
         }}
       />
@@ -45,8 +56,8 @@ export default function TabsLayout() {
         name="connect"
         options={{
           title: 'Kết nối',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="chatbubbles-outline" size={size} color={color} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons name={focused ? 'chatbubbles' : 'chatbubbles-outline'} size={21} color={color} />
           ),
         }}
       />
@@ -54,8 +65,8 @@ export default function TabsLayout() {
         name="profile/index"
         options={{
           title: 'Cá nhân',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person-outline" size={size} color={color} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons name={focused ? 'person' : 'person-outline'} size={21} color={color} />
           ),
         }}
       />

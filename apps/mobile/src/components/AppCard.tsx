@@ -18,14 +18,14 @@ export function AppCard({ padded = true, style, children, ...rest }: AppCardProp
 const styles = StyleSheet.create({
   card: {
     backgroundColor: COLORS.surface,
-    borderRadius: RADIUS.lg,
+    borderRadius: RADIUS.xl,
     borderWidth: 1,
     borderColor: COLORS.border,
     shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    elevation: 2,
+    shadowOpacity: 0.03,
+    shadowRadius: 8,
+    elevation: 1,
   },
   padded: {
     padding: SPACING.lg,

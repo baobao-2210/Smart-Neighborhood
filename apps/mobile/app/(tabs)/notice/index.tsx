@@ -103,7 +103,15 @@ export default function NoticeScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <AppText variant="h2">Thông báo & Sự kiện</AppText>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACING.sm }}>
+          <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: COLORS.primaryLight, alignItems: 'center', justifyContent: 'center' }}>
+            <Ionicons name="notifications" size={18} color={COLORS.primary} />
+          </View>
+          <View>
+            <AppText variant="h2" style={{ fontSize: 18 }}>Thông báo & Sự kiện</AppText>
+            <AppText variant="caption" color={COLORS.textMuted}>Tin chính thức từ Tổ dân phố</AppText>
+          </View>
+        </View>
         {canOfficer && (
           <TouchableOpacity onPress={() => setModalOpen(true)} style={styles.addBtn}>
             <Ionicons name="add-circle" size={28} color={COLORS.primary} />

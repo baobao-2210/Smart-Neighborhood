@@ -54,9 +54,17 @@ export default function ConnectScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <AppText variant="h2">Kết nối Cộng đồng</AppText>
-        <TouchableOpacity onPress={() => createSupportChat.mutate()}>
-          <Ionicons name="create-outline" size={24} color={COLORS.primary} />
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACING.sm }}>
+          <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: COLORS.primaryLight, alignItems: 'center', justifyContent: 'center' }}>
+            <Ionicons name="chatbubbles" size={18} color={COLORS.primary} />
+          </View>
+          <View>
+            <AppText variant="h2" style={{ fontSize: 18 }}>Kết nối Cộng đồng</AppText>
+            <AppText variant="caption" color={COLORS.textMuted}>Trao đổi trực tiếp với Tổ trưởng & Cư dân</AppText>
+          </View>
+        </View>
+        <TouchableOpacity onPress={() => createSupportChat.mutate()} style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.primaryLight, alignItems: 'center', justifyContent: 'center' }}>
+          <Ionicons name="create-outline" size={20} color={COLORS.primary} />
         </TouchableOpacity>
       </View>
 

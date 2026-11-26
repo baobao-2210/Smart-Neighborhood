@@ -211,7 +211,7 @@ export function FeedPostCard({
               >
                 <Ionicons
                   name={active ? item.icon : (`${item.icon}-outline` as any)}
-                  size={18}
+                  size={16}
                   color={active ? item.color : COLORS.textSecondary}
                 />
                 <AppText
@@ -229,7 +229,7 @@ export function FeedPostCard({
 
         {onPressDetail && (
           <TouchableOpacity onPress={onPressDetail} style={styles.actionBtn}>
-            <Ionicons name="chatbubble-outline" size={18} color={COLORS.textSecondary} />
+            <Ionicons name="chatbubble-outline" size={16} color={COLORS.textSecondary} />
             <AppText
               variant="caption"
               color={COLORS.textSecondary}
