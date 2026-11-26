@@ -46,6 +46,13 @@ export default function PostDetailScreen() {
   const user = useAuthStore((s) => s.user);
   const isOfficer = isOfficerRole(user?.role);
 
+  // Safeguard: If routed with id === 'create', immediately redirect to create screen
+  React.useEffect(() => {
+    if (id === 'create') {
+      router.replace('/(tabs)/feed/create');
+    }
+  }, [id, router]);
+
   const [commentText, setCommentText] = useState('');
   const [replyTo, setReplyTo] = useState<PostComment | null>(null);
 
@@ -56,7 +63,8 @@ export default function PostDetailScreen() {
   const [reportModalOpen, setReportModalOpen] = useState(false);
   const [reportReason, setReportReason] = useState('');
 
-  const { data: post, isLoading, refetch } = usePostDetail(id ?? '');
+  const isPostIdValid = Boolean(id) && id !== 'create';
+  const { data: post, isLoading, refetch } = usePostDetail(isPostIdValid ? id! : '');
   const toggleReaction = useToggleReaction();
   const addComment = useAddComment();
   const togglePin = useTogglePinPost();

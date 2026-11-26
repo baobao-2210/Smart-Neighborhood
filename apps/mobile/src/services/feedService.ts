@@ -83,7 +83,7 @@ export function usePostDetail(id: string) {
       const res = await apiClient.get(`/api/v1/posts/${id}`);
       return res.data.data as PostItem & { comments: PostComment[] };
     },
-    enabled: Boolean(id) && isAuthenticated,
+    enabled: Boolean(id) && id !== 'create' && isAuthenticated,
   });
 }
 

@@ -12,15 +12,15 @@ export default function FeedLayout() {
       }}
     >
       <Stack.Screen name="index" options={{ headerShown: false }} />
-      <Stack.Screen name="[id]" options={{ title: 'Chi tiết bài viết' }} />
       <Stack.Screen
         name="create"
-        options={{ title: 'Đăng bài mới', presentation: 'modal' }}
+        options={{ title: 'Tạo bài viết & Phản ánh' }}
       />
       <Stack.Screen
         name="report-create"
-        options={{ title: 'Gửi phản ánh sự cố', presentation: 'modal' }}
+        options={{ title: 'Gửi phản ánh sự cố' }}
       />
+      <Stack.Screen name="[id]" options={{ title: 'Chi tiết bài viết' }} />
     </Stack>
   );
 }
