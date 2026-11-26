@@ -84,3 +84,4 @@ Chi tiết kết quả kiểm toán và thiết kế hệ thống nằm trong th
 - `SECURITY_AUDIT.md`: Thiết kế bảo mật, RBAC và bảo vệ thông tin PII.
 - `MODULE_READINESS.md`: Đánh giá mức độ sẵn sàng của 7 module.
 - `DEVELOPMENT_ROADMAP.md`: Lộ trình phát triển 7 giai đoạn.
+

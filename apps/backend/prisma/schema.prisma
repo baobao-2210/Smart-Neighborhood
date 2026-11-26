@@ -8,16 +8,20 @@ generator client {
 }
 
 // ==========================================
-// 1. ENUMS & ĐỊNH NGHĨA HỆ THỐNG
+// 1. ENUMS HỆ THỐNG (6 MODULE - KHÔNG CÓ TÀI CHÍNH)
 // ==========================================
 
 enum UserRole {
-  SUPER_ADMIN     // Quản trị viên hệ thống cấp Phường/Quận
-  TO_TRUONG       // Trưởng ban điều hành / Tổ trưởng tổ dân phố
-  TO_PHO          // Tổ phó tổ dân phố
-  CAN_BO          // Cán bộ phụ trách chuyên trách (y tế, trật tự, văn hóa)
-  CANH_SAT_KV     // Cảnh sát khu vực phụ trách địa bàn
-  CU_DAN          // Cư dân / Chủ hộ / Nhân khẩu
+  SUPER_ADMIN
+  LEADER
+  STAFF
+  RESIDENT
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  DELETION_REQUESTED
 }
 
 enum Gender {
@@ -26,435 +30,614 @@ enum Gender {
   OTHER
 }
 
+enum ResidenceType {
+  THUONG_TRU
+  TAM_TRU
+  TAM_VANG
+  LUU_TRU
+}
+
 enum ResidenceStatus {
-  THUONG_TRU      // Thường trú (Hộ khẩu cố định tại tổ)
-  TAM_TRU         // Tạm trú (Có đăng ký tạm trú hợp pháp)
-  TAM_VANG        // Tạm vắng (Thường trú nhưng đang tạm vắng)
-  LUU_TRU         // Lưu trú (Thuê nhà ngắn hạn, công nhân, sinh viên)
+  DANG_CU_TRU
+  TAM_VANG
+  DA_CHUYEN_DI
 }
 
 enum HouseholdRelation {
-  CHU_HO          // Chủ hộ
-  VO_CHONG        // Vợ / Chồng
-  CON_DE          // Con đẻ
-  CON_NUOI        // Con nuôi
-  BO_ME           // Bố / Mẹ
-  ONG_BA          // Ông / Bà
-  CHAU            // Cháu nội / Cháu ngoại
-  ANH_CHI_EM      // Anh / Chị / Em
-  NGUOI_THUE      // Người thuê trọ
-  KHAC            // Mối quan hệ khác
+  CHU_HO
+  VO_CHONG
+  CON
+  BO_ME
+  ONG_BA
+  CHAU
+  ANH_CHI_EM
+  NGUOI_THUE
+  KHAC
+}
+
+enum DirectMessagePolicy {
+  EVERYONE
+  NEIGHBORHOOD_ONLY
+  OFFICERS_ONLY
+}
+
+enum DeletionRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum PostCategory {
+  LIFE
+  WARNING
+  EVENT_RECAP
+}
+
+enum PostVisibility {
+  PUBLIC
+  OFFICERS_ONLY
+}
+
+enum ReactionType {
+  LIKE
+  HEART
+  CLAP
+}
+
+enum ReportCategory {
+  INFRASTRUCTURE
+  SANITATION
+  SECURITY
+  LIGHTING
+  OTHER
+}
+
+enum ReportVisibility {
+  PUBLIC
+  PRIVATE
+}
+
+enum ReportStatus {
+  PENDING
+  IN_PROGRESS
+  RESOLVED
+  REJECTED
 }
 
 enum AnnouncementPriority {
-  NORMAL          // Bình thường (Thông tin sinh hoạt)
-  IMPORTANT       // Quan trọng (Lịch cắt điện nước, tiêm chủng)
-  URGENT          // Khẩn cấp (Bão lũ, dịch bệnh, an ninh)
+  NORMAL
+  IMPORTANT
+  URGENT
 }
 
-enum FundType {
-  BAT_BUOC        // Khoản thu bắt buộc (Phí vệ sinh, an ninh)
-  TU_NGUYEN       // Vận động quyên góp (Vì người nghèo, khuyến học)
+enum EventStatus {
+  UPCOMING
+  ONGOING
+  COMPLETED
+  CANCELLED
 }
 
-enum PaymentStatus {
-  PENDING         // Chờ thanh toán / Chờ xác nhận
-  COMPLETED       // Đã hoàn tất đóng nộp
-  CANCELLED       // Đã hủy biên lai
-}
-
-enum PaymentMethod {
-  TIEN_MAT        // Tiền mặt (Nộp trực tiếp cho tổ trưởng/thủ quỹ)
-  VIETQR          // Chuyển khoản ngân hàng qua mã VietQR
-  VNPAY           // Cổng thanh toán trực tuyến
-}
-
-enum RequestStatus {
-  CHO_TIEP_NHAN   // Mới gửi, chờ cán bộ tiếp nhận
-  DANG_XU_LY      // Đang trong quá trình xử lý, kiểm tra thực địa
-  DA_XU_LY        // Đã giải quyết xong, có kết quả phản hồi
-  TU_CHOI         // Từ chối (Không thuộc thẩm quyền, sai sự thật)
+enum EventRegistrationStatus {
+  REGISTERED
+  CANCELLED
+  ATTENDED
 }
 
 enum PlaceCategory {
-  NHA_VAN_HOA     // Nhà sinh hoạt cộng đồng / Nhà văn hóa
-  TRAM_Y_TE       // Trạm y tế / Bệnh viện lân cận
-  DIEM_RUC_RAC    // Điểm tập kết rác thải / Vệ sinh môi trường
-  CAMERA_AN_NINH  // Vị trí camera giám sát an ninh
-  DIEM_CUU_HOA    // Trụ nước cứu hỏa / Bình chữa cháy công cộng
-  DIEM_TRU_AN     // Điểm tránh trú thiên tai, nhà lánh nạn khẩn cấp
+  NHA_VAN_HOA
+  TRAM_Y_TE
+  DIEM_CUU_HOA
+  DIEM_SINH_HOAT
+  OTHER
+}
+
+enum ConversationType {
+  DIRECT
+  GROUP
+  SUPPORT
+}
+
+enum ConversationMemberRole {
+  ADMIN
+  MEMBER
+}
+
+enum MessageReportStatus {
+  PENDING
+  REVIEWED
+  DISMISSED
+}
+
+enum AttachmentEntityType {
+  POST
+  REPORT
+  ANNOUNCEMENT
+  MESSAGE
 }
 
 // ==========================================
-// 2. PHÂN VÙNG HÀNH CHÍNH & TỔ DÂN PHỐ
+// 2. ĐA TỔ DÂN PHỐ (MULTI-TENANT ROOT)
 // ==========================================
 
-model ToDanPho {
-  id              String      @id @default(uuid())
-  code            String      @unique // Mã định danh tổ dân phố (VD: TDP-05-P12)
-  name            String      // Tên tổ dân phố (VD: Tổ dân phố số 5)
-  ward            String      // Phường / Xã
-  district        String      // Quận / Huyện
-  city            String      // Tỉnh / Thành phố
-  boundaryGeoJson Json?       // Dữ liệu tọa độ ranh giới địa lý (Polygon GeoJSON)
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+model Neighborhood {
+  id              String   @id @default(uuid())
+  code            String   @unique
+  name            String
+  ward            String
+  district        String
+  city            String
+  boundaryGeoJson Json?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
-  // Quan hệ
-  users           User[]
-  households      Household[]
-  posts           Post[]
-  announcements   Announcement[]
-  events          Event[]
-  fundCampaigns   FundCampaign[]
-  communityPlaces CommunityPlace[]
-  communityRequests CommunityRequest[]
+  users         User[]
+  households    Household[]
+  posts         Post[]
+  reports       Report[]
+  announcements Announcement[]
+  events        Event[]
+  places        CommunityPlace[]
+  conversations Conversation[]
+  auditLogs     AuditLog[]
 
-  @@map("to_dan_pho")
+  @@map("neighborhoods")
 }
 
 // ==========================================
-// 3. TÀI KHOẢN, PHÂN QUYỀN & HỒ SƠ (MODULE 7)
+// 3. TÀI KHOẢN, CÀI ĐẶT & BẢO MẬT (MODULE 6)
 // ==========================================
 
 model User {
-  id               String       @id @default(uuid())
-  phoneNumber      String       @unique // Số điện thoại dùng làm tên đăng nhập
-  passwordHash     String       // Mật khẩu mã hóa Argon2 hoặc Bcrypt
-  fullName         String       // Họ và tên hiển thị
+  id               String     @id @default(uuid())
+  neighborhoodId   String
+  neighborhood     Neighborhood @relation(fields: [neighborhoodId], references: [id])
+  phoneNumber      String     @unique
+  email            String?    @unique
+  passwordHash     String
+  fullName         String
   avatarUrl        String?
-  role             UserRole     @default(CU_DAN)
-  isActive         Boolean      @default(true)
-  toDanPhoId       String
-  toDanPho         ToDanPho     @relation(fields: [toDanPhoId], references: [id])
-  refreshTokenHash String?      // Lưu trữ token xoay vòng bảo mật
-  createdAt        DateTime     @default(now())
-  updatedAt        DateTime     @updatedAt
+  role             UserRole   @default(RESIDENT)
+  staffTitle       String?
+  status           UserStatus @default(ACTIVE)
+  refreshTokenHash String?
+  deletedAt        DateTime?
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
 
-  // Quan hệ
-  residentProfile Resident?    // Hồ sơ cư dân liên kết
-  deviceTokens    DeviceToken[]
-  posts           Post[]
-  comments        Comment[]
-  reactions       PostReaction[]
-  readReceipts    AnnouncementReadReceipt[]
-  eventAttendees  EventAttendee[]
-  createdRequests CommunityRequest[]
-  auditLogs       AuditLog[]
+  setting          UserSetting?
+  deletionRequests AccountDeletionRequest[]
+  deviceTokens     DeviceToken[]
+  notifications    Notification[]
+  householdMember  HouseholdMember?
 
-  @@index([toDanPhoId])
+  posts            Post[]
+  comments         Comment[]
+  reactions        Reaction[]
+  submittedReports Report[]           @relation("ReportCreator")
+  assignedReports  Report[]           @relation("ReportAssignee")
+  reportChanges    ReportStatusHistory[]
+
+  announcements    Announcement[]
+  readReceipts     AnnouncementReadReceipt[]
+  organizedEvents  Event[]
+  eventRegistrations EventRegistration[]
+
+  createdConversations Conversation[]
+  conversationMembers  ConversationMember[]
+  sentMessages         Message[]
+  messageReports       MessageReport[]  @relation("MessageReporter")
+  reviewedMsgReports   MessageReport[]  @relation("MessageReviewer")
+
+  attachments      Attachment[]
+  auditLogs        AuditLog[]
+
+  @@index([neighborhoodId, role])
   @@map("users")
 }
 
-model DeviceToken {
-  id          String   @id @default(uuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  token       String   @unique // Expo Push Token hoặc FCM token
-  deviceType  String   // ios, android
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+model UserSetting {
+  id                 String              @id @default(uuid())
+  userId             String              @unique
+  user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pushAnnouncements  Boolean             @default(true)
+  pushEvents         Boolean             @default(true)
+  pushReports        Boolean             @default(true)
+  pushMessages       Boolean             @default(true)
+  allowDirectMessage DirectMessagePolicy @default(NEIGHBORHOOD_ONLY)
+  showPhoneNumber    Boolean             @default(false)
+  updatedAt          DateTime            @updatedAt
 
+  @@map("user_settings")
+}
+
+model AccountDeletionRequest {
+  id         String                @id @default(uuid())
+  userId     String
+  user       User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reason     String
+  status     DeletionRequestStatus @default(PENDING)
+  reviewedBy String?
+  reviewedAt DateTime?
+  createdAt  DateTime              @default(now())
+
+  @@index([userId, status])
+  @@map("account_deletion_requests")
+}
+
+model DeviceToken {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token      String   @unique
+  platform   String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([userId])
   @@map("device_tokens")
 }
 
+model Notification {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type        String
+  title       String
+  body        String
+  referenceId String?
+  isRead      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@index([userId, isRead, createdAt(sort: Desc)])
+  @@map("notifications")
+}
+
+model AuditLog {
+  id             String        @id @default(uuid())
+  neighborhoodId String?
+  neighborhood   Neighborhood? @relation(fields: [neighborhoodId], references: [id])
+  actorId        String?
+  actor          User?         @relation(fields: [actorId], references: [id])
+  action         String
+  resource       String
+  resourceId     String?
+  oldData        Json?
+  newData        Json?
+  ipAddress      String?
+  createdAt      DateTime      @default(now())
+
+  @@index([neighborhoodId, createdAt(sort: Desc)])
+  @@index([actorId, action])
+  @@map("audit_logs")
+}
+
 // ==========================================
-// 4. QUẢN LÝ CƯ DÂN & HỘ KHẨU (MODULE 3)
+// 4. QUẢN LÝ CƯ DÂN & HỘ GIA ĐÌNH (MODULE 3)
 // ==========================================
 
 model Household {
-  id              String       @id @default(uuid())
-  code            String       @unique // Mã sổ hộ gia đình (VD: HK-2026-0042)
-  houseNumber     String       // Số nhà, tên ngõ
-  streetName      String       // Đường / Phố
-  toDanPhoId      String
-  toDanPho        ToDanPho     @relation(fields: [toDanPhoId], references: [id])
-  latitude        Float?       // Tọa độ định vị nhà
-  longitude       Float?
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
+  id             String       @id @default(uuid())
+  neighborhoodId String
+  neighborhood   Neighborhood @relation(fields: [neighborhoodId], references: [id])
+  code           String
+  houseNumber    String
+  street         String
+  addressDetail  String?
+  latitude       Float?
+  longitude      Float?
+  deletedAt      DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
 
-  // Quan hệ
-  residents       Resident[]
-  contributions   ContributionRecord[]
+  members        HouseholdMember[]
 
-  @@index([toDanPhoId])
+  @@unique([neighborhoodId, code])
+  @@index([neighborhoodId])
   @@map("households")
 }
 
-model Resident {
+model HouseholdMember {
   id              String            @id @default(uuid())
   householdId     String
   household       Household         @relation(fields: [householdId], references: [id], onDelete: Cascade)
-  userId          String?           @unique // Liên kết tài khoản app nếu đã tạo
+  userId          String?           @unique
   user            User?             @relation(fields: [userId], references: [id])
   fullName        String
-  cccdNumber      String?           @unique // Số CCCD 12 số định danh
+  cccdNumber      String?           @unique
   dateOfBirth     DateTime
   gender          Gender
-  relationToHead  HouseholdRelation @default(CON_DE)
-  residenceStatus ResidenceStatus   @default(THUONG_TRU)
-  career          String?           // Nghề nghiệp
+  isHead          Boolean           @default(false)
+  relationToHead  HouseholdRelation @default(CON)
+  residenceType   ResidenceType     @default(THUONG_TRU)
+  residenceStatus ResidenceStatus   @default(DANG_CU_TRU)
+  expiredAt       DateTime?
   notes           String?
+  deletedAt       DateTime?
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
 
-  @@index([householdId])
-  @@index([cccdNumber])
-  @@map("residents")
+  @@index([householdId, isHead])
+  @@index([householdId, residenceStatus])
+  @@map("household_members")
 }
 
 // ==========================================
-// 5. BẢNG TIN CỘNG ĐỒNG (MODULE 1)
+// 5. BẢNG TIN CỘNG ĐỒNG & PHẢN ÁNH (MODULE 1 & 4)
 // ==========================================
 
 model Post {
-  id          String         @id @default(uuid())
-  toDanPhoId  String
-  toDanPho    ToDanPho       @relation(fields: [toDanPhoId], references: [id])
-  authorId    String
-  author      User           @relation(fields: [authorId], references: [id])
-  content     String         // Nội dung bài đăng
-  isPinned    Boolean        @default(false)
-  isOfficial  Boolean        @default(false) // Đăng bởi Ban điều hành tổ
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+  id             String         @id @default(uuid())
+  neighborhoodId String
+  neighborhood   Neighborhood   @relation(fields: [neighborhoodId], references: [id])
+  authorId       String
+  author         User           @relation(fields: [authorId], references: [id])
+  category       PostCategory   @default(LIFE)
+  visibility     PostVisibility @default(PUBLIC)
+  title          String?
+  content        String
+  isPinned       Boolean        @default(false)
+  isOfficial     Boolean        @default(false)
+  deletedAt      DateTime?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
 
-  // Quan hệ
-  media       PostMedia[]
-  comments    Comment[]
-  reactions   PostReaction[]
+  comments       Comment[]
+  reactions      Reaction[]
 
-  @@index([toDanPhoId, createdAt(sort: Desc)])
+  @@index([neighborhoodId, isPinned(sort: Desc), createdAt(sort: Desc)])
   @@map("posts")
 }
 
-model PostMedia {
-  id          String   @id @default(uuid())
-  postId      String
-  post        Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
-  mediaUrl    String   // Link ảnh hoặc tài liệu
-  mediaType   String   // image/jpeg, image/png, video/mp4
-  displayOrder Int     @default(0)
-
-  @@map("post_media")
-}
-
 model Comment {
-  id          String    @id @default(uuid())
-  postId      String
-  post        Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
-  authorId    String
-  author      User      @relation(fields: [authorId], references: [id])
-  content     String
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id        String    @id @default(uuid())
+  postId    String
+  post      Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User      @relation(fields: [authorId], references: [id])
+  parentId  String?
+  parent    Comment?  @relation("CommentReplies", fields: [parentId], references: [id])
+  replies   Comment[] @relation("CommentReplies")
+  content   String
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   @@index([postId, createdAt])
   @@map("comments")
 }
 
-model PostReaction {
-  id          String   @id @default(uuid())
-  postId      String
-  post        Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
-  userId      String
-  user        User     @relation(fields: [userId], references: [id])
-  type        String   @default("LIKE") // LIKE, HEART, CLAP
-  createdAt   DateTime @default(now())
+model Reaction {
+  id        String       @id @default(uuid())
+  postId    String
+  post      Post         @relation(fields: [postId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User         @relation(fields: [userId], references: [id])
+  type      ReactionType @default(LIKE)
+  createdAt DateTime     @default(now())
 
   @@unique([postId, userId])
-  @@map("post_reactions")
+  @@map("reactions")
+}
+
+model Report {
+  id             String           @id @default(uuid())
+  neighborhoodId String
+  neighborhood   Neighborhood     @relation(fields: [neighborhoodId], references: [id])
+  reporterId     String
+  reporter       User             @relation("ReportCreator", fields: [reporterId], references: [id])
+  assignedToId   String?
+  assignedTo     User?            @relation("ReportAssignee", fields: [assignedToId], references: [id])
+  category       ReportCategory   @default(OTHER)
+  visibility     ReportVisibility @default(PUBLIC)
+  title          String
+  description    String
+  status         ReportStatus     @default(PENDING)
+  latitude       Float?
+  longitude      Float?
+  addressText    String?
+  deletedAt      DateTime?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  statusHistory  ReportStatusHistory[]
+
+  @@index([neighborhoodId, visibility, status, createdAt(sort: Desc)])
+  @@map("reports")
+}
+
+model ReportStatusHistory {
+  id          String       @id @default(uuid())
+  reportId    String
+  report      Report       @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  changedById String
+  changedBy   User         @relation(fields: [changedById], references: [id])
+  fromStatus  ReportStatus
+  toStatus    ReportStatus
+  note        String?
+  createdAt   DateTime     @default(now())
+
+  @@index([reportId, createdAt])
+  @@map("report_status_histories")
 }
 
 // ==========================================
-// 6. THÔNG BÁO VÀ SỰ KIỆN (MODULE 2)
+// 6. THÔNG BÁO, SỰ KIỆN & BẢN ĐỒ (MODULE 2 & 4)
 // ==========================================
 
 model Announcement {
-  id          String               @id @default(uuid())
-  toDanPhoId  String
-  toDanPho    ToDanPho             @relation(fields: [toDanPhoId], references: [id])
-  title       String
-  content     String
-  priority    AnnouncementPriority @default(NORMAL)
-  senderTitle String               // VD: Trưởng ban điều hành, Trưởng CAKV
-  attachedUrl String?              // File thông báo đính kèm (PDF, văn bản hành chính)
-  createdAt   DateTime             @default(now())
-  updatedAt   DateTime             @updatedAt
+  id             String               @id @default(uuid())
+  neighborhoodId String
+  neighborhood   Neighborhood         @relation(fields: [neighborhoodId], references: [id])
+  authorId       String
+  author         User                 @relation(fields: [authorId], references: [id])
+  title          String
+  content        String
+  priority       AnnouncementPriority @default(NORMAL)
+  isPinned       Boolean              @default(false)
+  publishedAt    DateTime             @default(now())
+  deletedAt      DateTime?
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
 
-  readReceipts AnnouncementReadReceipt[]
+  readReceipts   AnnouncementReadReceipt[]
 
-  @@index([toDanPhoId, priority, createdAt(sort: Desc)])
+  @@index([neighborhoodId, isPinned(sort: Desc), publishedAt(sort: Desc)])
   @@map("announcements")
 }
 
 model AnnouncementReadReceipt {
-  id              String       @id @default(uuid())
-  announcementId  String
-  announcement    Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
-  userId          String
-  user            User         @relation(fields: [userId], references: [id])
-  readAt          DateTime     @default(now())
+  id             String       @id @default(uuid())
+  announcementId String
+  announcement   Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id])
+  readAt         DateTime     @default(now())
 
   @@unique([announcementId, userId])
   @@map("announcement_read_receipts")
 }
 
 model Event {
-  id          String         @id @default(uuid())
-  toDanPhoId  String
-  toDanPho    ToDanPho       @relation(fields: [toDanPhoId], references: [id])
-  title       String         // Tiêu đề sự kiện: Họp tổ dân phố, Ngày hội Đại đoàn kết
-  description String
-  location    String         // Địa điểm: Nhà sinh hoạt văn hóa
-  startTime   DateTime
-  endTime     DateTime?
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+  id             String       @id @default(uuid())
+  neighborhoodId String
+  neighborhood   Neighborhood @relation(fields: [neighborhoodId], references: [id])
+  organizerId    String
+  organizer      User         @relation(fields: [organizerId], references: [id])
+  title          String
+  description    String
+  locationName   String
+  latitude       Float?
+  longitude      Float?
+  startTime      DateTime
+  endTime        DateTime?
+  maxAttendees   Int?
+  status         EventStatus  @default(UPCOMING)
+  deletedAt      DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
 
-  attendees   EventAttendee[]
+  registrations  EventRegistration[]
 
-  @@index([toDanPhoId, startTime])
+  @@index([neighborhoodId, startTime])
   @@map("events")
 }
 
-model EventAttendee {
-  id          String    @id @default(uuid())
-  eventId     String
-  event       Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  userId      String
-  user        User      @relation(fields: [userId], references: [id])
-  isConfirmed Boolean   @default(true)
-  registeredAt DateTime @default(now())
+model EventRegistration {
+  id           String                  @id @default(uuid())
+  eventId      String
+  event        Event                   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User                    @relation(fields: [userId], references: [id])
+  status       EventRegistrationStatus @default(REGISTERED)
+  registeredAt DateTime                @default(now())
+  updatedAt    DateTime                @updatedAt
 
   @@unique([eventId, userId])
-  @@map("event_attendees")
+  @@map("event_registrations")
 }
-
-// ==========================================
-// 7. QUẢN LÝ THU CHI VÀ ĐÓNG GÓP (MODULE 4)
-// ==========================================
-
-model FundCampaign {
-  id            String         @id @default(uuid())
-  toDanPhoId    String
-  toDanPho      ToDanPho       @relation(fields: [toDanPhoId], references: [id])
-  title         String         // VD: Quỹ Khuyến học năm 2026, Phí Vệ sinh quý 4/2026
-  description   String?
-  type          FundType       @default(BAT_BUOC)
-  targetAmount  Decimal?       @db.Decimal(15, 2)
-  amountPerUnit Decimal?       @db.Decimal(15, 2) // Định mức mỗi hộ
-  startDate     DateTime
-  endDate       DateTime?
-  isActive      Boolean        @default(true)
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-
-  contributions ContributionRecord[]
-  expenses      ExpenseRecord[]
-
-  @@index([toDanPhoId, isActive])
-  @@map("fund_campaigns")
-}
-
-model ContributionRecord {
-  id            String        @id @default(uuid())
-  campaignId    String
-  campaign      FundCampaign  @relation(fields: [campaignId], references: [id])
-  householdId   String
-  household     Household     @relation(fields: [householdId], references: [id])
-  amount        Decimal       @db.Decimal(15, 2)
-  status        PaymentStatus @default(PENDING)
-  paymentMethod PaymentMethod @default(TIEN_MAT)
-  receiptNumber String        @unique // Số biên lai thu
-  payerName     String        // Người đứng ra nộp
-  notes         String?
-  paidAt        DateTime?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-
-  @@index([campaignId, householdId])
-  @@map("contribution_records")
-}
-
-model ExpenseRecord {
-  id            String       @id @default(uuid())
-  campaignId    String
-  campaign      FundCampaign @relation(fields: [campaignId], references: [id])
-  title         String       // Khoản chi: Chi thuê xe gom rác, Chi quà khuyến học
-  amount        Decimal      @db.Decimal(15, 2)
-  invoiceUrl    String?      // Hóa đơn, chứng từ chi
-  spentBy       String       // Người thực hiện chi
-  spentAt       DateTime     @default(now())
-  createdAt     DateTime     @default(now())
-
-  @@index([campaignId])
-  @@map("expense_records")
-}
-
-// ==========================================
-// 8. BẢN ĐỒ CỘNG ĐỒNG VÀ ĐỊA ĐIỂM (MODULE 5)
-// ==========================================
 
 model CommunityPlace {
-  id          String        @id @default(uuid())
-  toDanPhoId  String
-  toDanPho    ToDanPho      @relation(fields: [toDanPhoId], references: [id])
-  name        String        // Tên địa điểm: Nhà văn hóa TDP số 5, Trụ cứu hỏa số 2
-  category    PlaceCategory
-  address     String
-  latitude    Float
-  longitude   Float
-  imageUrl    String?
-  details     Json?         // Thông tin bổ sung: thời gian mở cửa, số liên hệ khẩn cấp
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  id             String        @id @default(uuid())
+  neighborhoodId String
+  neighborhood   Neighborhood  @relation(fields: [neighborhoodId], references: [id])
+  name           String
+  category       PlaceCategory @default(DIEM_SINH_HOAT)
+  address        String
+  latitude       Float
+  longitude      Float
+  details        Json?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
 
-  @@index([toDanPhoId, category])
+  @@index([neighborhoodId, category])
   @@map("community_places")
 }
 
 // ==========================================
-// 9. KẾT NỐI CỘNG ĐỒNG VÀ PHẢN ÁNH (MODULE 6)
+// 7. KẾT NỐI CỘNG ĐỒNG & TỆP ĐÍNH KÈM (MODULE 5)
 // ==========================================
 
-model CommunityRequest {
-  id          String        @id @default(uuid())
-  toDanPhoId  String
-  toDanPho    ToDanPho      @relation(fields: [toDanPhoId], references: [id])
-  creatorId   String
-  creator     User          @relation(fields: [creatorId], references: [id])
-  title       String        // VD: Phản ánh tiếng ồn sau 23h tại ngõ 12
-  content     String
-  category    String        // An ninh trật tự, Vệ sinh môi trường, Đèn đường, Hạ tầng
-  images      String[]      // Mảng link ảnh chứng cứ hiện trường
-  status      RequestStatus @default(CHO_TIEP_NHAN)
-  responderId String?       // Cán bộ nhận nhiệm vụ xử lý
-  responseNote String?      // Nội dung trả lời kết quả xử lý
-  resolvedAt  DateTime?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+model Conversation {
+  id             String           @id @default(uuid())
+  neighborhoodId String
+  neighborhood   Neighborhood     @relation(fields: [neighborhoodId], references: [id])
+  type           ConversationType @default(DIRECT)
+  name           String?
+  createdById    String
+  createdBy      User             @relation(fields: [createdById], references: [id])
+  lastMessageAt  DateTime?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
 
-  @@index([toDanPhoId, status, createdAt(sort: Desc)])
-  @@map("community_requests")
+  members        ConversationMember[]
+  messages       Message[]
+
+  @@index([neighborhoodId, lastMessageAt(sort: Desc)])
+  @@map("conversations")
 }
 
-// ==========================================
-// 10. NHẬT KÝ KIỂM TOÁN HỆ THỐNG (AUDIT LOGS)
-// ==========================================
+model ConversationMember {
+  id             String                 @id @default(uuid())
+  conversationId String
+  conversation   Conversation           @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User                   @relation(fields: [userId], references: [id])
+  memberRole     ConversationMemberRole @default(MEMBER)
+  lastReadAt     DateTime?
+  isMuted        Boolean                @default(false)
+  joinedAt       DateTime               @default(now())
 
-model AuditLog {
-  id          String   @id @default(uuid())
-  userId      String?
-  user        User?    @relation(fields: [userId], references: [id])
-  action      String   // LOGIN, CREATE_ANNOUNCEMENT, RECORD_PAYMENT, MODIFY_RESIDENT
-  resource    String   // USERS, HOUSEHOLDS, FINANCE
-  details     Json?    // Dữ liệu cũ và mới để đối soát
-  ipAddress   String?
-  userAgent   String?
-  createdAt   DateTime @default(now())
+  @@unique([conversationId, userId])
+  @@index([userId])
+  @@map("conversation_members")
+}
 
-  @@index([action, createdAt])
-  @@map("audit_logs")
+model Message {
+  id             String          @id @default(uuid())
+  conversationId String
+  conversation   Conversation    @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId       String
+  sender         User            @relation(fields: [senderId], references: [id])
+  content        String
+  isModerated    Boolean         @default(false)
+  deletedAt      DateTime?
+  createdAt      DateTime        @default(now())
+
+  reports        MessageReport[]
+
+  @@index([conversationId, createdAt(sort: Desc)])
+  @@map("messages")
+}
+
+model MessageReport {
+  id           String              @id @default(uuid())
+  messageId    String
+  message      Message             @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  reporterId   String
+  reporter     User                @relation("MessageReporter", fields: [reporterId], references: [id])
+  reason       String
+  status       MessageReportStatus @default(PENDING)
+  reviewedById String?
+  reviewedBy   User?               @relation("MessageReviewer", fields: [reviewedById], references: [id])
+  createdAt    DateTime            @default(now())
+
+  @@index([status, createdAt])
+  @@map("message_reports")
+}
+
+model Attachment {
+  id         String               @id @default(uuid())
+  uploaderId String
+  uploader   User                 @relation(fields: [uploaderId], references: [id])
+  entityType AttachmentEntityType
+  entityId   String
+  url        String
+  mimeType   String
+  fileSize   Int
+  fileName   String?
+  createdAt  DateTime             @default(now())
+
+  @@index([entityType, entityId])
+  @@map("attachments")
 }

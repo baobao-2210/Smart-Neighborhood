@@ -50,8 +50,10 @@ ios/*.xcworkspace
 # Prisma
 apps/backend/prisma/*.db
 apps/backend/prisma/*.db-journal
+apps/backend/uploads/
 
 # Tests & Coverage
 coverage/
 *.lcov
 .nyc_output
+
