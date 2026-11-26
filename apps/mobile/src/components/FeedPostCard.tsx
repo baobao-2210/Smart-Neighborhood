@@ -21,6 +21,7 @@ interface FeedPostCardProps {
   post: PostItem;
   onPressDetail?: () => void;
   onReact: (type: ReactionType) => void;
+  onMessageAuthor?: () => void;
   onTogglePin?: () => void;
   onEdit?: () => void;
   onReportPost?: () => void;
@@ -36,13 +37,13 @@ const REACTIONS: {
 }[] = [
   { type: 'LIKE', icon: 'thumbs-up', label: 'Thích', color: COLORS.primary },
   { type: 'HEART', icon: 'heart', label: 'Tim', color: COLORS.danger },
-  { type: 'CLAP', icon: 'hand-left', label: 'Ủng hộ', color: COLORS.warning },
 ];
 
 export function FeedPostCard({
   post,
   onPressDetail,
   onReact,
+  onMessageAuthor,
   onTogglePin,
   onEdit,
   onReportPost,
@@ -246,6 +247,20 @@ export function FeedPostCard({
               </TouchableOpacity>
             );
           })}
+
+          {onMessageAuthor && post.authorId !== currentUser?.id && (
+            <TouchableOpacity onPress={onMessageAuthor} style={styles.actionBtn}>
+              <Ionicons name="paper-plane-outline" size={15} color={COLORS.secondary} />
+              <AppText
+                variant="caption"
+                semibold
+                color={COLORS.secondary}
+                style={styles.actionLabel}
+              >
+                Nhắn tin
+              </AppText>
+            </TouchableOpacity>
+          )}
         </View>
 
         {onPressDetail && (

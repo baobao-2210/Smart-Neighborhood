@@ -23,6 +23,7 @@ import {
   useFeedPosts,
   useFeedRealtime,
   useReports,
+  useStartDirectChat,
   useTogglePinPost,
   useToggleReaction,
   useUpdateReportStatus,
@@ -67,6 +68,21 @@ export default function FeedScreen() {
   const togglePin = useTogglePinPost();
   const deletePost = useDeletePost();
   const updateReportStatus = useUpdateReportStatus();
+  const startDirectChat = useStartDirectChat();
+
+  const handleMessageAuthor = (authorId: string) => {
+    startDirectChat.mutate(authorId, {
+      onSuccess: (conv) => {
+        router.push(`/(tabs)/connect/${conv.id}` as any);
+      },
+      onError: (err: any) => {
+        Alert.alert(
+          'Không thể nhắn tin',
+          err?.response?.data?.message || 'Không thể mở cuộc trò chuyện với cư dân này.',
+        );
+      },
+    });
+  };
 
   const unifiedFeed = useMemo<UnifiedItem[]>(() => {
     const linkedPostIds = new Set(posts.map((p) => p.id));
@@ -416,6 +432,7 @@ export default function FeedScreen() {
                   post={item.data}
                   onPressDetail={() => router.push(`/(tabs)/feed/post/${item.data.id}` as any)}
                   onReact={(type) => toggleReaction.mutate({ postId: item.data.id, type })}
+                  onMessageAuthor={() => handleMessageAuthor(item.data.authorId)}
                   onTogglePin={() => togglePin.mutate(item.data.id)}
                   onDelete={() => deletePost.mutate(item.data.id)}
                 />

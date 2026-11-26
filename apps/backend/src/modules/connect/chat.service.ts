@@ -82,6 +82,27 @@ export class ChatService {
       ) {
         throw new ForbiddenException('Người dùng này chỉ nhận tin nhắn từ Cán bộ tổ');
       }
+
+      const existing = await this.prisma.conversation.findFirst({
+        where: {
+          neighborhoodId: user.neighborhoodId,
+          type: 'DIRECT',
+          AND: [
+            { members: { some: { userId: user.id } } },
+            { members: { some: { userId: targetUserId } } },
+          ],
+        },
+        include: {
+          members: {
+            include: {
+              user: { select: { id: true, fullName: true, avatarUrl: true, role: true } },
+            },
+          },
+        },
+      });
+      if (existing) {
+        return existing;
+      }
     }
 
     return this.prisma.conversation.create({

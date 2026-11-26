@@ -23,6 +23,7 @@ import {
   useDeletePost,
   usePostDetail,
   useReportPost,
+  useStartDirectChat,
   useTogglePinPost,
   useToggleReaction,
   useUpdatePost,
@@ -73,6 +74,7 @@ export default function PostDetailScreen() {
   const reportPost = useReportPost();
   const acceptReport = useAcceptReport();
   const updateReportStatus = useUpdateReportStatus();
+  const startDirectChat = useStartDirectChat();
 
   const groupedComments = useMemo(() => {
     const all = post?.comments ?? [];
@@ -207,6 +209,16 @@ export default function PostDetailScreen() {
           post={post}
           showFullContent
           onReact={(type) => toggleReaction.mutate({ postId: post.id, type })}
+          onMessageAuthor={() =>
+            startDirectChat.mutate(post.authorId, {
+              onSuccess: (conv) => router.push(`/(tabs)/connect/${conv.id}` as any),
+              onError: (err: any) =>
+                Alert.alert(
+                  'Không thể nhắn tin',
+                  err?.response?.data?.message || 'Không thể mở cuộc trò chuyện với cư dân này.',
+                ),
+            })
+          }
           onTogglePin={() => togglePin.mutate(post.id)}
           onEdit={post.authorId === user?.id ? openEditModal : undefined}
           onReportPost={() => setReportModalOpen(true)}

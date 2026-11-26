@@ -225,6 +225,22 @@ export function useReportPost() {
   });
 }
 
+export function useStartDirectChat() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (targetUserId: string) => {
+      const res = await apiClient.post('/api/v1/conversations', {
+        type: 'DIRECT',
+        participantIds: [targetUserId],
+      });
+      return res.data.data as { id: string };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+    },
+  });
+}
+
 export function useTogglePinPost() {
   const queryClient = useQueryClient();
   return useMutation({
