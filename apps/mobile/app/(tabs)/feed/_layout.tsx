@@ -20,7 +20,7 @@ export default function FeedLayout() {
         name="report-create"
         options={{ title: 'Gửi phản ánh sự cố' }}
       />
-      <Stack.Screen name="[id]" options={{ title: 'Chi tiết bài viết' }} />
+      <Stack.Screen name="post/[id]" options={{ title: 'Chi tiết bài viết' }} />
     </Stack>
   );
 }

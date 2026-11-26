@@ -414,7 +414,7 @@ export default function FeedScreen() {
               return (
                 <FeedPostCard
                   post={item.data}
-                  onPressDetail={() => router.push(`/(tabs)/feed/${item.data.id}`)}
+                  onPressDetail={() => router.push(`/(tabs)/feed/post/${item.data.id}` as any)}
                   onReact={(type) => toggleReaction.mutate({ postId: item.data.id, type })}
                   onTogglePin={() => togglePin.mutate(item.data.id)}
                   onDelete={() => deletePost.mutate(item.data.id)}
