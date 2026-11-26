@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Param,
+  Patch,
   Post,
   Query,
 } from '@nestjs/common';
@@ -87,6 +88,32 @@ export class NotificationController {
     @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.notificationService.registerEvent(id, dto, user);
+  }
+
+  @Get('notifications')
+  getMyNotifications(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @CurrentUser() user?: AuthenticatedUser,
+  ) {
+    return this.notificationService.getMyNotifications(
+      user!,
+      page ? Number(page) : 1,
+      limit ? Number(limit) : 30,
+    );
+  }
+
+  @Patch('notifications/:id/read')
+  markNotificationRead(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.notificationService.markNotificationRead(id, user);
+  }
+
+  @Post('notifications/read-all')
+  markAllNotificationsRead(@CurrentUser() user: AuthenticatedUser) {
+    return this.notificationService.markAllNotificationsRead(user);
   }
 
   @Post('notifications/device-token')

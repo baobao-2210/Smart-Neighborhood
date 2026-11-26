@@ -187,7 +187,7 @@ export class NotificationService {
   }
 
   async createEvent(dto: CreateEventDto, user: AuthenticatedUser) {
-    return this.prisma.event.create({
+    const event = await this.prisma.event.create({
       data: {
         neighborhoodId: user.neighborhoodId,
         organizerId: user.id,
@@ -201,6 +201,74 @@ export class NotificationService {
         maxAttendees: dto.maxAttendees,
       },
     });
+
+    const residents = await this.prisma.user.findMany({
+      where: {
+        neighborhoodId: user.neighborhoodId,
+        deletedAt: null,
+        status: 'ACTIVE',
+      },
+      select: { id: true },
+    });
+
+    if (residents.length) {
+      await this.prisma.notification.createMany({
+        data: residents.map((r) => ({
+          userId: r.id,
+          type: 'EVENT_CREATED',
+          title: `Sự kiện mới: ${event.title}`,
+          body: `${event.locationName} • ${event.description.slice(0, 100)}`,
+          referenceId: event.id,
+        })),
+      });
+    }
+
+    return event;
+  }
+
+  async getMyNotifications(user: AuthenticatedUser, page = 1, limit = 30) {
+    const skip = (page - 1) * limit;
+    const [items, total, unreadCount] = await Promise.all([
+      this.prisma.notification.findMany({
+        where: { userId: user.id },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      this.prisma.notification.count({ where: { userId: user.id } }),
+      this.prisma.notification.count({ where: { userId: user.id, isRead: false } }),
+    ]);
+
+    return {
+      data: items,
+      meta: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+        unreadCount,
+      },
+    };
+  }
+
+  async markNotificationRead(notificationId: string, user: AuthenticatedUser) {
+    const existing = await this.prisma.notification.findFirst({
+      where: { id: notificationId, userId: user.id },
+    });
+    if (!existing) throw new NotFoundException('Không tìm thấy thông báo');
+
+    return this.prisma.notification.update({
+      where: { id: notificationId },
+      data: { isRead: true },
+    });
+  }
+
+  async markAllNotificationsRead(user: AuthenticatedUser) {
+    const res = await this.prisma.notification.updateMany({
+      where: { userId: user.id, isRead: false },
+      data: { isRead: true },
+    });
+    return { updatedCount: res.count };
   }
 
   async registerEvent(

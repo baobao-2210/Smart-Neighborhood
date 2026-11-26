@@ -2,8 +2,12 @@ import React from 'react';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '@/constants/theme';
+import { useMyNotifications } from '@/services/noticeService';
 
 export default function TabsLayout() {
+  const { data: notifData } = useMyNotifications();
+  const unreadCount = notifData?.unreadCount ?? 0;
+
   return (
     <Tabs
       screenOptions={{
@@ -42,6 +46,13 @@ export default function TabsLayout() {
         name="notice/index"
         options={{
           title: 'Thông báo',
+          tabBarBadge: unreadCount > 0 ? (unreadCount > 99 ? '99+' : unreadCount) : undefined,
+          tabBarBadgeStyle: {
+            backgroundColor: COLORS.danger,
+            color: '#FFFFFF',
+            fontSize: 10,
+            fontWeight: '700',
+          },
           tabBarIcon: ({ color, size, focused }) => (
             <Ionicons name={focused ? 'notifications' : 'notifications-outline'} size={21} color={color} />
           ),
