@@ -65,7 +65,13 @@ const QUICK_LANDMARKS: SelectedLocation[] = [
 
 export default function UnifiedCreateScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ mode?: string; openMap?: string }>();
+  const params = useLocalSearchParams<{
+    mode?: string;
+    openMap?: string;
+    initialPhotoUri?: string;
+    initialPhotoUris?: string;
+    openCamera?: string;
+  }>();
   const user = useAuthStore((s) => s.user);
   const canOfficer = isOfficerRole(user?.role);
   const canLead = isLeaderRole(user?.role);
@@ -89,7 +95,18 @@ export default function UnifiedCreateScreen() {
   useEffect(() => {
     if (params.mode === 'REPORT') setSelectedTopicIdx(1);
     if (params.openMap === '1') setMapPickerOpen(true);
-  }, [params.mode, params.openMap]);
+    if (params.initialPhotoUri) {
+      setMediaUrls((prev) => (prev.includes(params.initialPhotoUri!) ? prev : [params.initialPhotoUri!, ...prev]));
+    }
+    if (params.initialPhotoUris) {
+      try {
+        const parsed = JSON.parse(params.initialPhotoUris);
+        if (Array.isArray(parsed)) {
+          setMediaUrls((prev) => Array.from(new Set([...prev, ...parsed])));
+        }
+      } catch {}
+    }
+  }, [params.mode, params.openMap, params.initialPhotoUri, params.initialPhotoUris]);
 
   const activeTopic = TOPICS[selectedTopicIdx];
   const isReportMode = activeTopic.kind === 'REPORT';

@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { FeedFilterType, PostItem } from '@todanpho/shared';
 import { COLORS, RADIUS, SPACING } from '@/constants/theme';
@@ -156,6 +157,51 @@ export default function FeedScreen() {
     refetchReports();
   };
 
+  const handleQuickLiveCamera = async () => {
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          'Chưa cấp quyền Camera',
+          'Vui lòng cho phép ứng dụng truy cập máy ảnh để chụp ảnh hiện trường và đăng lên cộng đồng.',
+        );
+        return;
+      }
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ['images'],
+        quality: 0.8,
+      });
+      if (!result.canceled && result.assets[0]?.uri) {
+        // Chuyển ngay sang màn hình đăng bài kèm ảnh vừa chụp
+        router.push({
+          pathname: '/(tabs)/feed/create',
+          params: { initialPhotoUri: result.assets[0].uri },
+        });
+      }
+    } catch {
+      Alert.alert('Không thể mở Camera', 'Vui lòng thử lại sau.');
+    }
+  };
+
+  const handlePickFromGallery = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsMultipleSelection: true,
+        quality: 0.8,
+      });
+      if (!result.canceled && result.assets.length > 0) {
+        const uris = JSON.stringify(result.assets.map((a) => a.uri));
+        router.push({
+          pathname: '/(tabs)/feed/create',
+          params: { initialPhotoUris: uris },
+        });
+      }
+    } catch {
+      router.push('/(tabs)/feed/create');
+    }
+  };
+
   const renderFacebookHeader = () => (
     <View style={styles.homeHeaderContainer}>
       {/* Phát thanh nội bộ */}
@@ -187,32 +233,56 @@ export default function FeedScreen() {
 
       {/* Facebook-style Unified Composer Box */}
       <AppCard style={styles.composerCard}>
-        <TouchableOpacity
-          activeOpacity={0.85}
-          onPress={() => router.push('/(tabs)/feed/create')}
-          style={styles.composerInputRow}
-        >
-          <Avatar
-            name={user?.fullName || 'CD'}
-            uri={user?.avatarUrl}
-            size={40}
-            isOfficial={isOfficer}
-          />
-          <View style={styles.composerPlaceholder}>
-            <AppText variant="body" color={COLORS.textMuted} numberOfLines={1}>
-              Bạn muốn đăng tin hay báo sự cố gì hôm nay?
-            </AppText>
-          </View>
-        </TouchableOpacity>
+        {/* Hàng trên: Avatar + Ô nhập bài viết + NÚT CAMERA CHỤP TRỰC TIẾP SÁT BÊN */}
+        <View style={styles.composerInputRow}>
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={() => router.push('/(tabs)/feed/create')}
+            style={styles.composerTouchArea}
+          >
+            <Avatar
+              name={user?.fullName || 'CD'}
+              uri={user?.avatarUrl}
+              size={40}
+              isOfficial={isOfficer}
+            />
+            <View style={styles.composerPlaceholder}>
+              <AppText variant="body" color={COLORS.textMuted} numberOfLines={1}>
+                Hôm nay khu phố ta có gì mới, anh/chị?
+              </AppText>
+            </View>
+          </TouchableOpacity>
 
+          {/* Nút camera real live sát bên ô bài viết */}
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={handleQuickLiveCamera}
+            style={styles.liveCameraBtn}
+          >
+            <Ionicons name="camera" size={21} color={COLORS.primary} />
+            <View style={styles.liveDotSmall} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Hàng dưới: Các tùy chọn nhanh */}
         <View style={styles.composerActionsRow}>
           <TouchableOpacity
-            onPress={() => router.push('/(tabs)/feed/create')}
+            onPress={handleQuickLiveCamera}
+            style={[styles.composerPill, { borderColor: '#166534', backgroundColor: '#14532D28' }]}
+          >
+            <Ionicons name="camera" size={15} color="#22C55E" />
+            <AppText variant="caption" semibold color="#22C55E" style={{ marginLeft: 4 }}>
+              Chụp ảnh
+            </AppText>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={handlePickFromGallery}
             style={[styles.composerPill, { borderColor: '#134E4A', backgroundColor: COLORS.secondaryLight }]}
           >
             <Ionicons name="images-outline" size={15} color={COLORS.secondary} />
-            <AppText variant="caption" semibold color={COLORS.secondary} style={{ marginLeft: 5 }}>
-              Ảnh / Tin mới
+            <AppText variant="caption" semibold color={COLORS.secondary} style={{ marginLeft: 4 }}>
+              Thư viện
             </AppText>
           </TouchableOpacity>
 
@@ -221,7 +291,7 @@ export default function FeedScreen() {
             style={[styles.composerPill, { borderColor: '#4C1D24', backgroundColor: COLORS.dangerLight }]}
           >
             <Ionicons name="warning-outline" size={15} color={COLORS.danger} />
-            <AppText variant="caption" semibold color={COLORS.danger} style={{ marginLeft: 5 }}>
+            <AppText variant="caption" semibold color={COLORS.danger} style={{ marginLeft: 4 }}>
               Báo sự cố
             </AppText>
           </TouchableOpacity>
@@ -231,8 +301,8 @@ export default function FeedScreen() {
             style={[styles.composerPill, { borderColor: COLORS.primarySoft, backgroundColor: COLORS.primaryLight }]}
           >
             <Ionicons name="location-outline" size={15} color={COLORS.primary} />
-            <AppText variant="caption" semibold color={COLORS.primary} style={{ marginLeft: 5 }}>
-              Gắn vị trí
+            <AppText variant="caption" semibold color={COLORS.primary} style={{ marginLeft: 4 }}>
+              Vị trí
             </AppText>
           </TouchableOpacity>
         </View>
@@ -524,6 +594,12 @@ const styles = StyleSheet.create({
 
   composerCard: { padding: SPACING.md, gap: SPACING.md },
   composerInputRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
+  composerTouchArea: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+  },
   composerPlaceholder: {
     flex: 1,
     backgroundColor: COLORS.surfaceAlt,
@@ -532,6 +608,26 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderWidth: 1,
     borderColor: COLORS.border,
+  },
+  liveCameraBtn: {
+    width: 42,
+    height: 42,
+    borderRadius: RADIUS.md,
+    backgroundColor: COLORS.surfaceAlt,
+    borderWidth: 1,
+    borderColor: COLORS.primarySoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  liveDotSmall: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: '#22C55E',
   },
   composerActionsRow: { flexDirection: 'row', gap: SPACING.sm },
   composerPill: {
