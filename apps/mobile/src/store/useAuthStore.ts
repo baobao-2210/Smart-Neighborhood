@@ -1,74 +1,88 @@
 import { create } from 'zustand';
+import * as SecureStore from 'expo-secure-store';
 import { UserRole } from '@todanpho/shared';
+
+const REFRESH_TOKEN_KEY = 'smart_neighborhood_refresh_token';
 
 export interface AuthUser {
   id: string;
   fullName: string;
   phoneNumber: string;
+  email?: string | null;
   role: UserRole;
   staffTitle?: string | null;
   neighborhoodId: string;
-  neighborhoodName: string;
+  neighborhoodName?: string | null;
   avatarUrl?: string | null;
 }
 
 interface AuthState {
-  user: AuthUser;
+  user: AuthUser | null;
   accessToken: string | null;
-  switchDemoRole: (role: UserRole) => void;
+  isAuthenticated: boolean;
+  isHydrated: boolean;
+  setSession: (user: AuthUser, accessToken: string, refreshToken: string) => Promise<void>;
+  setAccessToken: (accessToken: string) => void;
+  setUser: (user: AuthUser) => void;
+  clearSession: () => Promise<void>;
+  setHydrated: (val: boolean) => void;
 }
 
-const DEMO_USERS: Record<UserRole, AuthUser> = {
-  [UserRole.RESIDENT]: {
-    id: 'user-resident-01',
-    fullName: 'Nguyễn Văn An',
-    phoneNumber: '0912345678',
-    role: UserRole.RESIDENT,
-    neighborhoodId: 'tdp-05-p12',
-    neighborhoodName: 'Tổ dân phố số 5 - P.12',
-    avatarUrl: null,
-  },
-  [UserRole.LEADER]: {
-    id: 'user-leader-01',
-    fullName: 'Trần Thị Minh',
-    phoneNumber: '0987654321',
-    role: UserRole.LEADER,
-    staffTitle: 'Tổ trưởng',
-    neighborhoodId: 'tdp-05-p12',
-    neighborhoodName: 'Tổ dân phố số 5 - P.12',
-    avatarUrl: null,
-  },
-  [UserRole.STAFF]: {
-    id: 'user-staff-01',
-    fullName: 'Đại úy Vũ Đức Thắng',
-    phoneNumber: '0944556677',
-    role: UserRole.STAFF,
-    staffTitle: 'Cảnh sát khu vực',
-    neighborhoodId: 'tdp-05-p12',
-    neighborhoodName: 'Tổ dân phố số 5 - P.12',
-    avatarUrl: null,
-  },
-  [UserRole.SUPER_ADMIN]: {
-    id: 'user-admin-01',
-    fullName: 'Quản trị viên Phường',
-    phoneNumber: '0999888777',
-    role: UserRole.SUPER_ADMIN,
-    neighborhoodId: 'tdp-05-p12',
-    neighborhoodName: 'Tổ dân phố số 5 - P.12',
-    avatarUrl: null,
-  },
-};
-
 export const useAuthStore = create<AuthState>((set) => ({
-  user: DEMO_USERS[UserRole.RESIDENT],
+  user: null,
   accessToken: null,
-  switchDemoRole: (role) => set({ user: DEMO_USERS[role] }),
+  isAuthenticated: false,
+  isHydrated: false,
+
+  setSession: async (user, accessToken, refreshToken) => {
+    try {
+      await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, refreshToken);
+    } catch {
+      // Web fallback if SecureStore is unavailable
+    }
+    set({
+      user,
+      accessToken,
+      isAuthenticated: true,
+      isHydrated: true,
+    });
+  },
+
+  setAccessToken: (accessToken) => set({ accessToken }),
+
+  setUser: (user) => set({ user }),
+
+  clearSession: async () => {
+    try {
+      await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY);
+    } catch {
+      // Ignore on web
+    }
+    set({
+      user: null,
+      accessToken: null,
+      isAuthenticated: false,
+      isHydrated: true,
+    });
+  },
+
+  setHydrated: (val) => set({ isHydrated: val }),
 }));
 
-export function isOfficerRole(role: UserRole): boolean {
+export async function getStoredRefreshToken(): Promise<string | null> {
+  try {
+    return await SecureStore.getItemAsync(REFRESH_TOKEN_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function isOfficerRole(role?: UserRole): boolean {
+  if (!role) return false;
   return [UserRole.LEADER, UserRole.STAFF, UserRole.SUPER_ADMIN].includes(role);
 }
 
-export function isLeaderRole(role: UserRole): boolean {
+export function isLeaderRole(role?: UserRole): boolean {
+  if (!role) return false;
   return [UserRole.LEADER, UserRole.SUPER_ADMIN].includes(role);
 }

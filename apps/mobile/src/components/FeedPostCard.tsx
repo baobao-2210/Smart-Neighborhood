@@ -46,8 +46,8 @@ export function FeedPostCard({
   showFullContent = false,
 }: FeedPostCardProps) {
   const currentUser = useAuthStore((s) => s.user);
-  const canLead = isLeaderRole(currentUser.role);
-  const canDelete = canLead || post.authorId === currentUser.id;
+  const canLead = isLeaderRole(currentUser?.role);
+  const canDelete = canLead || post.authorId === currentUser?.id;
 
   const handleMoreActions = () => {
     const options: {
@@ -149,6 +149,15 @@ export function FeedPostCard({
           {post.content}
         </AppText>
       </TouchableOpacity>
+
+      {post.locationName ? (
+        <View style={styles.locationRow}>
+          <Ionicons name="location" size={14} color={COLORS.primary} />
+          <AppText variant="caption" semibold color={COLORS.primary} style={{ marginLeft: 4 }}>
+            {post.locationName}
+          </AppText>
+        </View>
+      ) : null}
 
       {/* Media Gallery */}
       {post.media.length > 0 && (
@@ -276,6 +285,16 @@ const styles = StyleSheet.create({
   },
   content: {
     lineHeight: 23,
+    marginBottom: SPACING.md,
+  },
+  locationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.surfaceAlt,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 5,
+    borderRadius: RADIUS.sm,
+    alignSelf: 'flex-start',
     marginBottom: SPACING.md,
   },
   mediaScroll: {

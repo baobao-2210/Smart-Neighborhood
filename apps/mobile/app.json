@@ -6,7 +6,6 @@
     "orientation": "portrait",
     "scheme": "todanpho",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.todanpho.app"

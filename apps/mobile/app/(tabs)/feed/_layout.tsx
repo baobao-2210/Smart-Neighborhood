@@ -17,6 +17,10 @@ export default function FeedLayout() {
         name="create"
         options={{ title: 'Đăng bài mới', presentation: 'modal' }}
       />
+      <Stack.Screen
+        name="report-create"
+        options={{ title: 'Gửi phản ánh sự cố', presentation: 'modal' }}
+      />
     </Stack>
   );
 }

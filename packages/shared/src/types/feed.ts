@@ -40,6 +40,9 @@ export interface PostItem {
   content: string;
   isPinned: boolean;
   isOfficial: boolean;
+  locationName?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
   media: PostMediaItem[];
   reactionCount: number;
   commentCount: number;
@@ -56,6 +59,9 @@ export interface CreatePostPayload {
   visibility?: PostVisibility;
   isOfficial?: boolean;
   isPinned?: boolean;
+  locationName?: string;
+  latitude?: number;
+  longitude?: number;
   mediaUrls?: string[];
 }
 

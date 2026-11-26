@@ -8,7 +8,6 @@ import {
   ReactionType,
 } from '@todanpho/shared';
 import { apiClient } from './apiClient';
-import { feedMockStore } from './feedMockStore';
 import { useAuthStore } from '@/store/useAuthStore';
 
 export const FEED_KEYS = {
@@ -16,57 +15,75 @@ export const FEED_KEYS = {
   list: (filter: FeedFilterType, search: string) =>
     ['feed-posts', filter, search] as const,
   detail: (id: string) => ['feed-post', id] as const,
+  reports: ['feed-reports'] as const,
 };
 
-async function fetchPosts(filter: FeedFilterType, search: string): Promise<PostItem[]> {
-  try {
-    const res = await apiClient.get('/api/v1/posts', {
-      params: { filter, search: search || undefined, page: 1, limit: 30 },
-    });
-    return res.data.data;
-  } catch {
-    return feedMockStore.getPosts(filter, search);
-  }
-}
-
-async function fetchPostDetail(
-  id: string,
-): Promise<(PostItem & { comments: PostComment[] }) | null> {
-  try {
-    const res = await apiClient.get(`/api/v1/posts/${id}`);
-    return res.data.data;
-  } catch {
-    return feedMockStore.getPostById(id);
-  }
-}
-
 export function useFeedPosts(filter: FeedFilterType, search: string) {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   return useQuery({
     queryKey: FEED_KEYS.list(filter, search),
-    queryFn: () => fetchPosts(filter, search),
+    queryFn: async () => {
+      const res = await apiClient.get('/api/v1/posts', {
+        params: { filter, search: search || undefined, page: 1, limit: 30 },
+      });
+      return res.data.data as PostItem[];
+    },
+    enabled: isAuthenticated,
   });
 }
 
 export function usePostDetail(id: string) {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   return useQuery({
     queryKey: FEED_KEYS.detail(id),
-    queryFn: () => fetchPostDetail(id),
-    enabled: Boolean(id),
+    queryFn: async () => {
+      const res = await apiClient.get(`/api/v1/posts/${id}`);
+      return res.data.data as PostItem & { comments: PostComment[] };
+    },
+    enabled: Boolean(id) && isAuthenticated,
   });
+}
+
+async function uploadLocalImages(uris: string[]): Promise<string[]> {
+  const uploaded: string[] = [];
+  for (const uri of uris) {
+    if (!uri.startsWith('file://') && !uri.startsWith('content://')) {
+      uploaded.push(uri);
+      continue;
+    }
+    try {
+      const form = new FormData();
+      const filename = uri.split('/').pop() || `photo-${Date.now()}.jpg`;
+      form.append('file', {
+        uri,
+        name: filename,
+        type: 'image/jpeg',
+      } as any);
+      const res = await apiClient.post('/api/v1/upload', form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      if (res.data?.data?.url) {
+        uploaded.push(`${apiClient.defaults.baseURL}${res.data.data.url}`);
+      }
+    } catch {
+      uploaded.push(uri);
+    }
+  }
+  return uploaded;
 }
 
 export function useCreatePost() {
   const queryClient = useQueryClient();
-  const user = useAuthStore((s) => s.user);
-
   return useMutation({
     mutationFn: async (payload: CreatePostPayload) => {
-      try {
-        const res = await apiClient.post('/api/v1/posts', payload);
-        return res.data.data as PostItem;
-      } catch {
-        return feedMockStore.createPost(payload, user);
-      }
+      const mediaUrls = payload.mediaUrls?.length
+        ? await uploadLocalImages(payload.mediaUrls)
+        : undefined;
+      const res = await apiClient.post('/api/v1/posts', {
+        ...payload,
+        mediaUrls,
+      });
+      return res.data.data as PostItem;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: FEED_KEYS.all });
@@ -76,14 +93,9 @@ export function useCreatePost() {
 
 export function useToggleReaction() {
   const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: async ({ postId, type }: { postId: string; type: ReactionType }) => {
-      try {
-        await apiClient.post(`/api/v1/posts/${postId}/reactions`, { type });
-      } catch {
-        feedMockStore.toggleReaction(postId, type);
-      }
+      await apiClient.post(`/api/v1/posts/${postId}/reactions`, { type });
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: FEED_KEYS.all });
@@ -94,8 +106,6 @@ export function useToggleReaction() {
 
 export function useAddComment() {
   const queryClient = useQueryClient();
-  const user = useAuthStore((s) => s.user);
-
   return useMutation({
     mutationFn: async ({
       postId,
@@ -104,12 +114,8 @@ export function useAddComment() {
       postId: string;
       payload: CreateCommentPayload;
     }) => {
-      try {
-        const res = await apiClient.post(`/api/v1/posts/${postId}/comments`, payload);
-        return res.data.data as PostComment;
-      } catch {
-        return feedMockStore.addComment(postId, payload, user);
-      }
+      const res = await apiClient.post(`/api/v1/posts/${postId}/comments`, payload);
+      return res.data.data as PostComment;
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: FEED_KEYS.all });
@@ -120,14 +126,9 @@ export function useAddComment() {
 
 export function useTogglePinPost() {
   const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: async (postId: string) => {
-      try {
-        await apiClient.patch(`/api/v1/posts/${postId}/pin`);
-      } catch {
-        feedMockStore.togglePin(postId);
-      }
+      await apiClient.patch(`/api/v1/posts/${postId}/pin`);
     },
     onSuccess: (_, postId) => {
       queryClient.invalidateQueries({ queryKey: FEED_KEYS.all });
@@ -138,14 +139,9 @@ export function useTogglePinPost() {
 
 export function useDeletePost() {
   const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: async (postId: string) => {
-      try {
-        await apiClient.delete(`/api/v1/posts/${postId}`);
-      } catch {
-        feedMockStore.deletePost(postId);
-      }
+      await apiClient.delete(`/api/v1/posts/${postId}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: FEED_KEYS.all });
@@ -153,3 +149,65 @@ export function useDeletePost() {
   });
 }
 
+// ==========================================
+// PHẢN ÁNH SỰ CỐ (MODULE 1 REPORTS)
+// ==========================================
+
+export function useReports(status?: string) {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  return useQuery({
+    queryKey: [...FEED_KEYS.reports, status || 'ALL'],
+    queryFn: async () => {
+      const res = await apiClient.get('/api/v1/reports', {
+        params: { status: status || undefined, page: 1, limit: 30 },
+      });
+      return res.data.data as any[];
+    },
+    enabled: isAuthenticated,
+  });
+}
+
+export function useCreateReport() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: {
+      title: string;
+      description: string;
+      category: string;
+      visibility: 'PUBLIC' | 'PRIVATE';
+      addressText?: string;
+      latitude?: number;
+      longitude?: number;
+    }) => {
+      const res = await apiClient.post('/api/v1/reports', payload);
+      return res.data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: FEED_KEYS.reports });
+    },
+  });
+}
+
+export function useUpdateReportStatus() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      reportId,
+      status,
+      note,
+    }: {
+      reportId: string;
+      status: string;
+      note?: string;
+    }) => {
+      const res = await apiClient.patch(`/api/v1/reports/${reportId}/status`, {
+        status,
+        note,
+      });
+      return res.data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: FEED_KEYS.reports });
+    },
+  });
+}

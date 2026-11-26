@@ -378,6 +378,9 @@ model Post {
   content        String
   isPinned       Boolean        @default(false)
   isOfficial     Boolean        @default(false)
+  locationName   String?
+  latitude       Float?
+  longitude      Float?
   deletedAt      DateTime?
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt

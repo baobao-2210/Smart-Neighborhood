@@ -42,16 +42,7 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="map/index"
-        options={{
-          title: 'Bản đồ',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="map-outline" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="connect/index"
+        name="connect"
         options={{
           title: 'Kết nối',
           tabBarIcon: ({ color, size }) => (
@@ -66,6 +57,14 @@ export default function TabsLayout() {
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="person-outline" size={size} color={color} />
           ),
+        }}
+      />
+
+      {/* Bản đồ được tích hợp vào màn hình Đăng tin / Phản ánh, ẩn khỏi thanh Tab Bar */}
+      <Tabs.Screen
+        name="map/index"
+        options={{
+          href: null,
         }}
       />
 

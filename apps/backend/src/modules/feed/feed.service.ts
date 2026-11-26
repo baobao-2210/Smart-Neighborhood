@@ -215,6 +215,9 @@ export class FeedService {
           : PostVisibility.PUBLIC,
         isOfficial: officer ? Boolean(dto.isOfficial) : false,
         isPinned: leader ? Boolean(dto.isPinned) : false,
+        locationName: dto.locationName?.trim(),
+        latitude: dto.latitude,
+        longitude: dto.longitude,
       },
       include: {
         author: {
@@ -399,6 +402,9 @@ export class FeedService {
       content: post.content,
       isPinned: post.isPinned,
       isOfficial: post.isOfficial,
+      locationName: post.locationName,
+      latitude: post.latitude,
+      longitude: post.longitude,
       media: media.map((m) => ({
         id: m.id,
         url: m.url,

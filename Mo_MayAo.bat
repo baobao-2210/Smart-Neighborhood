@@ -9,7 +9,9 @@ if errorlevel 1 (
 )
 
 echo [2/4] Dang mo may ao Android Medium_Phone...
-start "" "%LOCALAPPDATA%\Android\Sdk\emulator\emulator.exe" -avd Medium_Phone
+set ANDROID_HOME=%LOCALAPPDATA%\Android\Sdk
+set ANDROID_SDK_ROOT=%LOCALAPPDATA%\Android\Sdk
+start "" /D "%LOCALAPPDATA%\Android\Sdk\emulator" "%LOCALAPPDATA%\Android\Sdk\emulator\emulator.exe" -avd Medium_Phone -gpu swiftshader_indirect -no-snapshot-load
 
 echo [3/4] Dang khoi dong Expo Metro Bundler (cong 8081)...
 start "Expo Metro Bundler" cmd /k "cd /d "%~dp0apps\mobile" && npx expo start --port 8081"
