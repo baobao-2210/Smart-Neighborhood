@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   StyleSheet,
@@ -13,7 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { FeedFilterType } from '@todanpho/shared';
+import { FeedFilterType, PostItem } from '@todanpho/shared';
 import { COLORS, RADIUS, SPACING } from '@/constants/theme';
 import { AppCard, AppText, Avatar, Badge, EmptyState } from '@/components';
 import { FeedPostCard } from '@/components/FeedPostCard';
@@ -28,10 +28,11 @@ import {
 import { isOfficerRole, useAuthStore } from '@/store/useAuthStore';
 import { formatRelativeTimeVi } from '@/utils/date';
 
-const FILTERS: { key: FeedFilterType; label: string }[] = [
+const FILTERS: { key: FeedFilterType | 'REPORTS_ONLY'; label: string }[] = [
   { key: 'ALL', label: 'Tất cả' },
+  { key: 'REPORTS_ONLY', label: 'Sự cố' },
   { key: 'OFFICIAL', label: 'Ban điều hành' },
-  { key: 'WARNING', label: 'Cảnh báo khẩn' },
+  { key: 'WARNING', label: 'Cảnh báo' },
   { key: 'LIFE', label: 'Đời sống' },
   { key: 'PINNED', label: 'Đã ghim' },
 ];
@@ -43,21 +44,70 @@ const STATUS_BADGE: Record<string, { label: string; tone: 'warning' | 'primary' 
   REJECTED: { label: 'Từ chối', tone: 'danger' },
 };
 
+type UnifiedItem =
+  | { kind: 'POST'; id: string; createdAt: string; data: PostItem }
+  | { kind: 'REPORT'; id: string; createdAt: string; data: any };
+
 export default function FeedScreen() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const isOfficer = isOfficerRole(user?.role);
 
-  const [tab, setTab] = useState<'POSTS' | 'REPORTS'>('POSTS');
-  const [filter, setFilter] = useState<FeedFilterType>('ALL');
+  const [filter, setFilter] = useState<FeedFilterType | 'REPORTS_ONLY'>('ALL');
   const [search, setSearch] = useState('');
 
-  const { data: posts = [], isLoading, isRefetching, refetch } = useFeedPosts(filter, search);
+  const apiFilter: FeedFilterType = filter === 'REPORTS_ONLY' ? 'ALL' : filter;
+  const { data: posts = [], isLoading, isRefetching, refetch } = useFeedPosts(apiFilter, search);
   const { data: reports = [], isLoading: loadingReports, refetch: refetchReports } = useReports();
+
   const toggleReaction = useToggleReaction();
   const togglePin = useTogglePinPost();
   const deletePost = useDeletePost();
   const updateReportStatus = useUpdateReportStatus();
+
+  const unifiedFeed = useMemo<UnifiedItem[]>(() => {
+    const q = search.trim().toLowerCase();
+    const filteredReports = reports.filter((r: any) => {
+      if (!q) return true;
+      return (
+        r.title?.toLowerCase().includes(q) ||
+        r.description?.toLowerCase().includes(q) ||
+        r.addressText?.toLowerCase().includes(q)
+      );
+    });
+
+    if (filter === 'REPORTS_ONLY') {
+      return filteredReports.map((r: any) => ({
+        kind: 'REPORT' as const,
+        id: `report-${r.id}`,
+        createdAt: r.createdAt,
+        data: r,
+      }));
+    }
+
+    const postItems: UnifiedItem[] = posts.map((p) => ({
+      kind: 'POST' as const,
+      id: `post-${p.id}`,
+      createdAt: p.createdAt,
+      data: p,
+    }));
+
+    if (filter === 'ALL') {
+      const reportItems: UnifiedItem[] = filteredReports.map((r: any) => ({
+        kind: 'REPORT' as const,
+        id: `report-${r.id}`,
+        createdAt: r.createdAt,
+        data: r,
+      }));
+      return [...postItems, ...reportItems].sort((a, b) => {
+        if (a.kind === 'POST' && a.data.isPinned && !(b.kind === 'POST' && b.data.isPinned)) return -1;
+        if (b.kind === 'POST' && b.data.isPinned && !(a.kind === 'POST' && a.data.isPinned)) return 1;
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      });
+    }
+
+    return postItems;
+  }, [posts, reports, filter, search]);
 
   const handleSOS = () => {
     Alert.alert(
@@ -86,7 +136,12 @@ export default function FeedScreen() {
     ]);
   };
 
-  const renderEspressoHeader = () => (
+  const handleRefreshAll = () => {
+    refetch();
+    refetchReports();
+  };
+
+  const renderFacebookHeader = () => (
     <View style={styles.homeHeaderContainer}>
       {/* Phát thanh nội bộ */}
       <AppCard style={styles.broadcastCard}>
@@ -115,7 +170,7 @@ export default function FeedScreen() {
         </TouchableOpacity>
       </AppCard>
 
-      {/* Quick Composer Box */}
+      {/* Facebook-style Unified Composer Box */}
       <AppCard style={styles.composerCard}>
         <TouchableOpacity
           activeOpacity={0.85}
@@ -125,12 +180,12 @@ export default function FeedScreen() {
           <Avatar
             name={user?.fullName || 'CD'}
             uri={user?.avatarUrl}
-            size={38}
+            size={40}
             isOfficial={isOfficer}
           />
           <View style={styles.composerPlaceholder}>
             <AppText variant="body" color={COLORS.textMuted} numberOfLines={1}>
-              Hôm nay khu phố ta có tin gì mới, {user?.fullName?.split(' ').pop() || 'bạn'}?
+              Bạn muốn đăng tin hay báo sự cố gì hôm nay?
             </AppText>
           </View>
         </TouchableOpacity>
@@ -142,12 +197,12 @@ export default function FeedScreen() {
           >
             <Ionicons name="images-outline" size={15} color={COLORS.secondary} />
             <AppText variant="caption" semibold color={COLORS.secondary} style={{ marginLeft: 5 }}>
-              Ảnh/Video
+              Ảnh / Tin mới
             </AppText>
           </TouchableOpacity>
 
           <TouchableOpacity
-            onPress={() => router.push('/(tabs)/feed/report-create' as any)}
+            onPress={() => router.push('/(tabs)/feed/create?mode=REPORT' as any)}
             style={[styles.composerPill, { borderColor: '#4C1D24', backgroundColor: COLORS.dangerLight }]}
           >
             <Ionicons name="warning-outline" size={15} color={COLORS.danger} />
@@ -157,12 +212,12 @@ export default function FeedScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            onPress={() => router.push('/(tabs)/connect' as any)}
+            onPress={() => router.push('/(tabs)/feed/create?openMap=1' as any)}
             style={[styles.composerPill, { borderColor: COLORS.primarySoft, backgroundColor: COLORS.primaryLight }]}
           >
-            <Ionicons name="chatbubbles-outline" size={15} color={COLORS.primary} />
+            <Ionicons name="location-outline" size={15} color={COLORS.primary} />
             <AppText variant="caption" semibold color={COLORS.primary} style={{ marginLeft: 5 }}>
-              Kết nối
+              Gắn vị trí
             </AppText>
           </TouchableOpacity>
         </View>
@@ -172,7 +227,7 @@ export default function FeedScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Espresso Dark Top Header */}
+      {/* Top Header */}
       <View style={styles.topHeader}>
         <View style={styles.headerLeft}>
           <View style={styles.brandIconBox}>
@@ -208,157 +263,118 @@ export default function FeedScreen() {
         </View>
       </View>
 
-      {/* Sub-tabs: Bảng tin | Phản ánh sự cố */}
-      <View style={styles.segmentRow}>
-        <TouchableOpacity
-          onPress={() => setTab('POSTS')}
-          style={[styles.segmentBtn, tab === 'POSTS' && styles.segmentActive]}
-        >
-          <AppText variant="body" semibold={tab === 'POSTS'} color={tab === 'POSTS' ? COLORS.primary : COLORS.textMuted}>
-            Bảng tin
-          </AppText>
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() => setTab('REPORTS')}
-          style={[styles.segmentBtn, tab === 'REPORTS' && styles.segmentActive]}
-        >
-          <AppText variant="body" semibold={tab === 'REPORTS'} color={tab === 'REPORTS' ? COLORS.primary : COLORS.textMuted}>
-            Phản ánh sự cố ({reports.length})
-          </AppText>
-        </TouchableOpacity>
+      {/* Search & Unified Filter Chips */}
+      <View style={styles.filterSection}>
+        <View style={styles.searchBox}>
+          <Ionicons name="search-outline" size={17} color={COLORS.textMuted} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Tìm bài viết, thông báo, sự cố, tác giả..."
+            placeholderTextColor={COLORS.textMuted}
+            value={search}
+            onChangeText={setSearch}
+          />
+          {search.length > 0 && (
+            <TouchableOpacity onPress={() => setSearch('')}>
+              <Ionicons name="close-circle" size={18} color={COLORS.textMuted} />
+            </TouchableOpacity>
+          )}
+        </View>
+
+        <FlatList
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          data={FILTERS}
+          keyExtractor={(item) => item.key}
+          contentContainerStyle={styles.chipRow}
+          renderItem={({ item }) => {
+            const active = filter === item.key;
+            return (
+              <TouchableOpacity
+                onPress={() => setFilter(item.key)}
+                style={[styles.chip, active && styles.chipActive]}
+              >
+                <AppText
+                  variant="caption"
+                  semibold={active}
+                  color={active ? COLORS.primary : COLORS.textSecondary}
+                >
+                  {item.label}
+                </AppText>
+              </TouchableOpacity>
+            );
+          }}
+        />
       </View>
 
-      {tab === 'POSTS' ? (
-        <>
-          <View style={styles.filterSection}>
-            <View style={styles.searchBox}>
-              <Ionicons name="search-outline" size={17} color={COLORS.textMuted} />
-              <TextInput
-                style={styles.searchInput}
-                placeholder="Tìm bài viết, thông báo, sự cố, tác giả..."
-                placeholderTextColor={COLORS.textMuted}
-                value={search}
-                onChangeText={setSearch}
-              />
-              {search.length > 0 && (
-                <TouchableOpacity onPress={() => setSearch('')}>
-                  <Ionicons name="close-circle" size={18} color={COLORS.textMuted} />
-                </TouchableOpacity>
-              )}
-            </View>
-
-            <FlatList
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              data={FILTERS}
-              keyExtractor={(item) => item.key}
-              contentContainerStyle={styles.chipRow}
-              renderItem={({ item }) => {
-                const active = filter === item.key;
-                return (
-                  <TouchableOpacity
-                    onPress={() => setFilter(item.key)}
-                    style={[styles.chip, active && styles.chipActive]}
-                  >
-                    <AppText
-                      variant="caption"
-                      semibold={active}
-                      color={active ? COLORS.primary : COLORS.textSecondary}
-                    >
-                      {item.label}
-                    </AppText>
-                  </TouchableOpacity>
-                );
-              }}
-            />
-          </View>
-
-          {isLoading ? (
-            <View style={styles.center}>
-              <ActivityIndicator size="large" color={COLORS.primary} />
-            </View>
-          ) : (
-            <FlatList
-              data={posts}
-              keyExtractor={(item) => item.id}
-              contentContainerStyle={styles.listContent}
-              ListHeaderComponent={renderEspressoHeader}
-              refreshControl={
-                <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.primary} />
-              }
-              renderItem={({ item }) => (
-                <FeedPostCard
-                  post={item}
-                  onPressDetail={() => router.push(`/(tabs)/feed/${item.id}`)}
-                  onReact={(type) => toggleReaction.mutate({ postId: item.id, type })}
-                  onTogglePin={() => togglePin.mutate(item.id)}
-                  onDelete={() => deletePost.mutate(item.id)}
-                />
-              )}
-              ListEmptyComponent={
-                <EmptyState
-                  icon="newspaper-outline"
-                  title="Chưa có bài viết nào"
-                  description="Hãy là người đầu tiên chia sẻ thông tin cho tổ dân phố."
-                  actionLabel="Đăng bài mới"
-                  onAction={() => router.push('/(tabs)/feed/create')}
-                />
-              }
-            />
-          )}
-        </>
-      ) : loadingReports ? (
+      {isLoading || loadingReports ? (
         <View style={styles.center}>
           <ActivityIndicator size="large" color={COLORS.primary} />
         </View>
       ) : (
         <FlatList
-          data={reports}
+          data={unifiedFeed}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
-          ListHeaderComponent={
-            <TouchableOpacity
-              onPress={() => router.push('/(tabs)/feed/report-create' as any)}
-              style={styles.createReportWideBtn}
-            >
-              <Ionicons name="warning-outline" size={18} color={COLORS.textInverse} />
-              <AppText variant="body" semibold color={COLORS.textInverse} style={{ marginLeft: 8 }}>
-                Báo sự cố mới (Camera & GPS)
-              </AppText>
-            </TouchableOpacity>
-          }
+          ListHeaderComponent={renderFacebookHeader}
           refreshControl={
-            <RefreshControl refreshing={false} onRefresh={refetchReports} tintColor={COLORS.primary} />
+            <RefreshControl
+              refreshing={isRefetching}
+              onRefresh={handleRefreshAll}
+              tintColor={COLORS.primary}
+            />
           }
           renderItem={({ item }) => {
-            const st = STATUS_BADGE[item.status] || { label: item.status, tone: 'neutral' };
+            if (item.kind === 'POST') {
+              return (
+                <FeedPostCard
+                  post={item.data}
+                  onPressDetail={() => router.push(`/(tabs)/feed/${item.data.id}`)}
+                  onReact={(type) => toggleReaction.mutate({ postId: item.data.id, type })}
+                  onTogglePin={() => togglePin.mutate(item.data.id)}
+                  onDelete={() => deletePost.mutate(item.data.id)}
+                />
+              );
+            }
+
+            const r = item.data;
+            const st = STATUS_BADGE[r.status] || { label: r.status, tone: 'neutral' };
             return (
               <AppCard style={styles.reportCard}>
                 <View style={styles.reportTop}>
-                  <Badge label={st.label} tone={st.tone} />
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Badge label="Phản ánh sự cố" tone="danger" />
+                    <Badge label={st.label} tone={st.tone} />
+                  </View>
                   <AppText variant="caption" color={COLORS.textMuted}>
-                    {formatRelativeTimeVi(item.createdAt)}
+                    {formatRelativeTimeVi(r.createdAt)}
                   </AppText>
                 </View>
+
                 <AppText variant="h3" style={styles.reportTitle}>
-                  {item.title}
+                  {r.title}
                 </AppText>
-                <View style={styles.reportLocationRow}>
-                  <Ionicons name="location-outline" size={14} color={COLORS.danger} />
-                  <AppText variant="caption" color={COLORS.textSecondary} style={{ marginLeft: 4 }}>
-                    {item.addressText || 'Chưa gắn địa chỉ'}
-                  </AppText>
-                </View>
-                <AppText variant="body" color={COLORS.textSecondary} numberOfLines={3}>
-                  {item.description}
+
+                {r.addressText ? (
+                  <View style={styles.reportLocationRow}>
+                    <Ionicons name="location" size={14} color={COLORS.danger} />
+                    <AppText variant="caption" color={COLORS.textSecondary} style={{ marginLeft: 4 }}>
+                      {r.addressText}
+                    </AppText>
+                  </View>
+                ) : null}
+
+                <AppText variant="body" color={COLORS.textSecondary} numberOfLines={4}>
+                  {r.description}
                 </AppText>
+
                 <View style={styles.reportFooter}>
                   <Badge
-                    label={item.visibility === 'PRIVATE' ? 'Riêng tư' : 'Công khai'}
-                    tone={item.visibility === 'PRIVATE' ? 'neutral' : 'primary'}
+                    label={r.visibility === 'PRIVATE' ? 'Ẩn danh' : 'Công khai'}
+                    tone={r.visibility === 'PRIVATE' ? 'neutral' : 'primary'}
                   />
                   {isOfficer && (
-                    <TouchableOpacity onPress={() => handleUpdateReport(item.id)}>
+                    <TouchableOpacity onPress={() => handleUpdateReport(r.id)}>
                       <AppText variant="caption" semibold color={COLORS.primary}>
                         Cập nhật trạng thái →
                       </AppText>
@@ -370,31 +386,25 @@ export default function FeedScreen() {
           }}
           ListEmptyComponent={
             <EmptyState
-              icon="alert-circle-outline"
-              title="Chưa có phản ánh nào"
-              description="Gửi báo cáo sự cố hạ tầng, vệ sinh hoặc an ninh tới Ban điều hành."
-              actionLabel="Gửi phản ánh"
-              onAction={() => router.push('/(tabs)/feed/report-create' as any)}
+              icon="newspaper-outline"
+              title="Chưa có bài viết nào"
+              description="Hãy là người đầu tiên chia sẻ thông tin hoặc gửi phản ánh cho tổ dân phố."
+              actionLabel="Đăng bài ngay"
+              onAction={() => router.push('/(tabs)/feed/create')}
             />
           }
         />
       )}
 
-      {/* Stitch Floating + Đăng bài Cyan Pill */}
+      {/* Floating + Đăng bài */}
       <TouchableOpacity
         activeOpacity={0.85}
-        onPress={() =>
-          router.push(
-            tab === 'POSTS'
-              ? '/(tabs)/feed/create'
-              : ('/(tabs)/feed/report-create' as any),
-          )
-        }
+        onPress={() => router.push('/(tabs)/feed/create')}
         style={styles.fab}
       >
         <Ionicons name="add" size={20} color={COLORS.textInverse} />
         <AppText variant="label" color={COLORS.textInverse} style={{ marginLeft: 4, fontSize: 13 }}>
-          {tab === 'POSTS' ? 'Đăng bài' : 'Báo sự cố'}
+          Đăng bài
         </AppText>
       </TouchableOpacity>
     </SafeAreaView>
@@ -436,20 +446,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  segmentRow: {
-    flexDirection: 'row',
-    backgroundColor: '#2A221D',
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  segmentBtn: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: SPACING.sm + 2,
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
-  },
-  segmentActive: { borderBottomColor: COLORS.primary },
   filterSection: {
     backgroundColor: COLORS.background,
     paddingTop: SPACING.sm,
@@ -488,7 +484,7 @@ const styles = StyleSheet.create({
     padding: SPACING.md,
     gap: SPACING.sm,
     backgroundColor: COLORS.surface,
-    borderColor: '#453017',
+    borderColor: '#5C3D12',
   },
   broadcastIconCircle: {
     width: 34,
@@ -533,16 +529,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
 
-  createReportWideBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.primary,
-    paddingVertical: 13,
-    borderRadius: RADIUS.full,
-    marginBottom: SPACING.md,
-  },
-  reportCard: { marginBottom: SPACING.md, gap: SPACING.xs },
+  reportCard: { marginBottom: SPACING.md, gap: SPACING.xs, borderColor: '#5C262E' },
   reportTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
   reportTitle: { marginBottom: 2 },
   reportLocationRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },

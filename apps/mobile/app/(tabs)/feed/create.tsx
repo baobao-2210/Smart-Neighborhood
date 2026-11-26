@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   StyleSheet,
@@ -10,7 +10,7 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
@@ -21,14 +21,27 @@ import {
   LocationPickerModal,
   SelectedLocation,
 } from '@/components/LocationPickerModal';
-import { useCreatePost } from '@/services/feedService';
+import { useCreatePost, useCreateReport } from '@/services/feedService';
 import { isLeaderRole, isOfficerRole, useAuthStore } from '@/store/useAuthStore';
 import { getRoleLabel } from '@/utils/date';
 
-const CATEGORIES: { key: PostCategory; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
-  { key: PostCategory.LIFE, label: 'Đời sống khu phố', icon: 'sunny-outline' },
-  { key: PostCategory.WARNING, label: 'Cảnh báo / An ninh', icon: 'warning-outline' },
-  { key: PostCategory.EVENT_RECAP, label: 'Hoạt động cộng đồng', icon: 'people-outline' },
+type ComposerTopic =
+  | { kind: 'POST'; category: PostCategory; label: string; icon: keyof typeof Ionicons.glyphMap }
+  | { kind: 'REPORT'; category: string; label: string; icon: keyof typeof Ionicons.glyphMap };
+
+const TOPICS: ComposerTopic[] = [
+  { kind: 'POST', category: PostCategory.LIFE, label: 'Tin tức / Đời sống', icon: 'sunny-outline' },
+  { kind: 'REPORT', category: 'INFRASTRUCTURE', label: 'Phản ánh sự cố', icon: 'warning-outline' },
+  { kind: 'POST', category: PostCategory.WARNING, label: 'Cảnh báo khẩn', icon: 'alert-circle-outline' },
+  { kind: 'POST', category: PostCategory.EVENT_RECAP, label: 'Hoạt động tổ', icon: 'people-outline' },
+];
+
+const REPORT_SUBCATEGORIES = [
+  { key: 'INFRASTRUCTURE', label: 'Hạ tầng / Đường ngõ' },
+  { key: 'LIGHTING', label: 'Đèn chiếu sáng' },
+  { key: 'SANITATION', label: 'Rác thải / Vệ sinh' },
+  { key: 'SECURITY', label: 'An ninh trật tự' },
+  { key: 'OTHER', label: 'Khác' },
 ];
 
 const QUICK_LANDMARKS: SelectedLocation[] = [
@@ -38,23 +51,36 @@ const QUICK_LANDMARKS: SelectedLocation[] = [
   { locationName: 'Cổng ngõ khu dân cư', latitude: 21.0191, longitude: 105.8011 },
 ];
 
-export default function CreatePostScreen() {
+export default function UnifiedCreateScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ mode?: string; openMap?: string }>();
   const user = useAuthStore((s) => s.user);
   const canOfficer = isOfficerRole(user?.role);
   const canLead = isLeaderRole(user?.role);
 
+  const [selectedTopicIdx, setSelectedTopicIdx] = useState(params.mode === 'REPORT' ? 1 : 0);
+  const [reportSubCat, setReportSubCat] = useState('INFRASTRUCTURE');
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
-  const [category, setCategory] = useState<PostCategory>(PostCategory.LIFE);
   const [mediaUrls, setMediaUrls] = useState<string[]>([]);
   const [location, setLocation] = useState<SelectedLocation | null>(null);
-  const [mapPickerOpen, setMapPickerOpen] = useState(false);
+  const [mapPickerOpen, setMapPickerOpen] = useState(params.openMap === '1');
   const [gpsLoading, setGpsLoading] = useState(false);
+
+  const [isPrivateReport, setIsPrivateReport] = useState(false);
   const [isOfficial, setIsOfficial] = useState(canOfficer);
   const [isPinned, setIsPinned] = useState(false);
 
   const createPost = useCreatePost();
+  const createReport = useCreateReport();
+
+  useEffect(() => {
+    if (params.mode === 'REPORT') setSelectedTopicIdx(1);
+    if (params.openMap === '1') setMapPickerOpen(true);
+  }, [params.mode, params.openMap]);
+
+  const activeTopic = TOPICS[selectedTopicIdx];
+  const isReportMode = activeTopic.kind === 'REPORT';
 
   const handleGetCurrentGps = async () => {
     setGpsLoading(true);
@@ -66,7 +92,9 @@ export default function CreatePostScreen() {
       }
       const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
       setLocation({
-        locationName: location?.locationName || `Vị trí hiện tại (${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)})`,
+        locationName:
+          location?.locationName ||
+          `Vị trí hiện tại (${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)})`,
         latitude: pos.coords.latitude,
         longitude: pos.coords.longitude,
       });
@@ -83,7 +111,6 @@ export default function CreatePostScreen() {
       allowsMultipleSelection: true,
       quality: 0.8,
     });
-
     if (!result.canceled) {
       const uris = result.assets.map((a) => a.uri);
       setMediaUrls((prev) => [...prev, ...uris].slice(0, 4));
@@ -96,18 +123,44 @@ export default function CreatePostScreen() {
       Alert.alert('Chưa cấp quyền Camera', 'Vui lòng cho phép truy cập Camera để chụp ảnh trực tiếp.');
       return;
     }
-
     const result = await ImagePicker.launchCameraAsync({
       mediaTypes: ['images'],
       quality: 0.8,
     });
-
     if (!result.canceled && result.assets[0]) {
       setMediaUrls((prev) => [...prev, result.assets[0].uri].slice(0, 4));
     }
   };
 
   const handleSubmit = () => {
+    if (isReportMode) {
+      if (!title.trim() || !content.trim()) {
+        Alert.alert('Thiếu thông tin', 'Khi phản ánh sự cố, vui lòng nhập tiêu đề và mô tả chi tiết.');
+        return;
+      }
+      createReport.mutate(
+        {
+          title: title.trim(),
+          description: content.trim(),
+          category: reportSubCat,
+          visibility: isPrivateReport ? 'PRIVATE' : 'PUBLIC',
+          addressText: location?.locationName,
+          latitude: isPrivateReport ? undefined : location?.latitude,
+          longitude: isPrivateReport ? undefined : location?.longitude,
+        },
+        {
+          onSuccess: () => {
+            Alert.alert('Đã gửi phản ánh', 'Ban điều hành tổ sẽ tiếp nhận và hiển thị trên bảng tin.');
+            router.back();
+          },
+          onError: (err: any) => {
+            Alert.alert('Lỗi', err?.response?.data?.message || 'Không thể gửi phản ánh');
+          },
+        },
+      );
+      return;
+    }
+
     if (content.trim().length < 2) {
       Alert.alert('Thiếu nội dung', 'Vui lòng nhập nội dung bài viết (tối thiểu 2 ký tự).');
       return;
@@ -117,7 +170,7 @@ export default function CreatePostScreen() {
       {
         title: title.trim() || undefined,
         content: content.trim(),
-        category,
+        category: activeTopic.category,
         isOfficial: canOfficer ? isOfficial : false,
         isPinned: canLead ? isPinned : false,
         locationName: location?.locationName,
@@ -126,9 +179,7 @@ export default function CreatePostScreen() {
         mediaUrls,
       },
       {
-        onSuccess: () => {
-          router.back();
-        },
+        onSuccess: () => router.back(),
         onError: (err: any) => {
           Alert.alert('Lỗi', err?.response?.data?.message || 'Không thể đăng bài viết');
         },
@@ -138,67 +189,55 @@ export default function CreatePostScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {/* Top Status Row */}
-      <View style={styles.topMetaRow}>
-        <View style={styles.neighborhoodBadge}>
-          <View style={styles.greenDot} />
-          <AppText variant="label" color={COLORS.secondary}>
-            {user?.neighborhoodName || 'TỔ DÂN PHỐ'}
-          </AppText>
-        </View>
-        <View style={styles.draftBadge}>
-          <Ionicons name="cloud-done-outline" size={14} color={COLORS.primary} />
-          <AppText variant="caption" color={COLORS.primary} style={{ marginLeft: 4 }}>
-            Sẵn sàng đăng
-          </AppText>
-        </View>
-      </View>
-
-      {/* Author Strip */}
+      {/* Facebook-style Author Header */}
       <AppCard style={styles.authorCard}>
         <Avatar
           name={user?.fullName || 'CD'}
           uri={user?.avatarUrl}
-          size={42}
+          size={44}
           isOfficial={canOfficer}
         />
         <View style={styles.authorInfo}>
-          <AppText variant="h3" style={{ fontSize: 15 }}>{user?.fullName || 'Cư dân'}</AppText>
+          <AppText variant="h3" style={{ fontSize: 16 }}>{user?.fullName || 'Cư dân'}</AppText>
           <AppText variant="caption" color={COLORS.textSecondary}>
-            {user ? getRoleLabel(user.role, user.staffTitle) : 'Cư dân'}
+            {user ? getRoleLabel(user.role, user.staffTitle) : 'Cư dân'} • {user?.neighborhoodName || 'Tổ dân phố'}
           </AppText>
         </View>
       </AppCard>
 
-      {/* Category Pill Selector */}
+      {/* Unified Topic Selector (Bài viết + Phản ánh sự cố chung 1 chỗ) */}
       <View style={styles.sectionBlock}>
         <View style={styles.sectionTitleRow}>
           <AppText variant="label" color={COLORS.textPrimary}>
-            Lĩnh vực bài viết <AppText variant="label" color={COLORS.danger}>*</AppText>
+            Chủ đề bài viết
           </AppText>
-          <AppText variant="caption" color={COLORS.textMuted}>Chọn 1 mục</AppText>
+          <AppText variant="caption" color={COLORS.primary}>Chọn 1 loại</AppText>
         </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.catScroll}>
-          {CATEGORIES.map((cat) => {
-            const active = category === cat.key;
+          {TOPICS.map((t, idx) => {
+            const active = selectedTopicIdx === idx;
+            const isRep = t.kind === 'REPORT';
             return (
               <TouchableOpacity
-                key={cat.key}
-                onPress={() => setCategory(cat.key)}
-                style={[styles.catChip, active && styles.catChipActive]}
+                key={t.label}
+                onPress={() => setSelectedTopicIdx(idx)}
+                style={[
+                  styles.catChip,
+                  active && (isRep ? styles.catChipReportActive : styles.catChipActive),
+                ]}
               >
                 <Ionicons
-                  name={cat.icon}
+                  name={t.icon}
                   size={15}
-                  color={active ? COLORS.textInverse : COLORS.primary}
+                  color={active ? (isRep ? COLORS.danger : COLORS.primary) : COLORS.textSecondary}
                 />
                 <AppText
                   variant="caption"
                   semibold={active}
-                  color={active ? COLORS.textInverse : COLORS.textPrimary}
+                  color={active ? (isRep ? COLORS.danger : COLORS.primary) : COLORS.textPrimary}
                   style={{ marginLeft: 6 }}
                 >
-                  {cat.label}
+                  {t.label}
                 </AppText>
               </TouchableOpacity>
             );
@@ -206,13 +245,68 @@ export default function CreatePostScreen() {
         </ScrollView>
       </View>
 
+      {/* Sub-category if Phản ánh sự cố is selected */}
+      {isReportMode && (
+        <AppCard style={styles.reportSubCard}>
+          <AppText variant="label" color={COLORS.danger} style={{ marginBottom: 8 }}>
+            Hạng mục sự cố hiện trường
+          </AppText>
+          <View style={styles.landmarkRow}>
+            {REPORT_SUBCATEGORIES.map((sc) => {
+              const active = reportSubCat === sc.key;
+              return (
+                <TouchableOpacity
+                  key={sc.key}
+                  onPress={() => setReportSubCat(sc.key)}
+                  style={[styles.landmarkChip, active && styles.landmarkChipActive]}
+                >
+                  <AppText
+                    variant="caption"
+                    color={active ? COLORS.primary : COLORS.textSecondary}
+                    semibold={active}
+                  >
+                    {sc.label}
+                  </AppText>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </AppCard>
+      )}
+
+      {/* Facebook-style Text Composer */}
+      <AppCard style={styles.inputCard}>
+        <TextInput
+          style={styles.titleInput}
+          placeholder={isReportMode ? 'Tiêu đề sự cố (bắt buộc)...' : 'Tiêu đề bài viết (không bắt buộc)...'}
+          placeholderTextColor={COLORS.textMuted}
+          value={title}
+          onChangeText={setTitle}
+        />
+        <TextInput
+          style={styles.contentInput}
+          placeholder={
+            isReportMode
+              ? 'Mô tả chi tiết tình trạng sự cố để Ban điều hành xử lý...'
+              : 'Bạn đang nghĩ gì? Chia sẻ tin tức, hình ảnh hoặc thông báo cho khu phố...'
+          }
+          placeholderTextColor={COLORS.textMuted}
+          multiline
+          maxLength={500}
+          textAlignVertical="top"
+          value={content}
+          onChangeText={setContent}
+        />
+        <AppText variant="caption" color={COLORS.textMuted} style={{ textAlign: 'right' }}>
+          {content.length}/500 ký tự
+        </AppText>
+      </AppCard>
+
       {/* Media Section (Camera + Gallery) */}
       <View style={styles.sectionBlock}>
-        <View style={styles.sectionTitleRow}>
-          <AppText variant="label" color={COLORS.textPrimary}>
-            Hình ảnh đính kèm ({mediaUrls.length}/4)
-          </AppText>
-        </View>
+        <AppText variant="label" color={COLORS.textPrimary}>
+          Ảnh & Video đính kèm ({mediaUrls.length}/4)
+        </AppText>
         <View style={styles.mediaActionGrid}>
           <TouchableOpacity onPress={handleTakePhoto} style={styles.mediaActionCard}>
             <View style={styles.mediaActionIconBox}>
@@ -223,14 +317,14 @@ export default function CreatePostScreen() {
                 Chụp ảnh trực tiếp
               </AppText>
               <AppText variant="caption" color={COLORS.textMuted} style={{ fontSize: 11 }}>
-                Tự động gắn GPS
+                Mở Camera ngay
               </AppText>
             </View>
           </TouchableOpacity>
 
           <TouchableOpacity onPress={handlePickFromLibrary} style={styles.mediaActionCard}>
             <View style={styles.mediaActionIconBox}>
-              <Ionicons name="images" size={20} color={COLORS.primary} />
+              <Ionicons name="images" size={20} color={COLORS.secondary} />
             </View>
             <View style={{ flex: 1 }}>
               <AppText variant="caption" semibold color={COLORS.textPrimary}>
@@ -248,17 +342,11 @@ export default function CreatePostScreen() {
             {mediaUrls.map((uri, idx) => (
               <View key={`${uri}-${idx}`} style={styles.thumbWrap}>
                 <Image source={{ uri }} style={styles.thumb} />
-                <View style={styles.thumbOverlayBadge}>
-                  <Ionicons name="location" size={10} color={COLORS.textInverse} />
-                  <AppText variant="caption" color={COLORS.textInverse} style={{ fontSize: 10, marginLeft: 2 }}>
-                    Ảnh #{idx + 1}
-                  </AppText>
-                </View>
                 <TouchableOpacity
                   onPress={() => setMediaUrls((prev) => prev.filter((_, i) => i !== idx))}
                   style={styles.removeBtn}
                 >
-                  <Ionicons name="close-circle" size={22} color={COLORS.textInverse} />
+                  <Ionicons name="close-circle" size={22} color="#FFFFFF" />
                 </TouchableOpacity>
               </View>
             ))}
@@ -266,11 +354,11 @@ export default function CreatePostScreen() {
         )}
       </View>
 
-      {/* Location & Landmarks Card */}
+      {/* Location & Map Picker */}
       <AppCard style={styles.locationCard}>
         <View style={styles.sectionTitleRow}>
           <AppText variant="label" color={COLORS.textPrimary}>
-            Vị trí & Điểm mốc
+            Vị trí & Bản đồ khu phố
           </AppText>
           {location && (
             <AppText variant="caption" color={COLORS.secondary} semibold>
@@ -297,7 +385,6 @@ export default function CreatePostScreen() {
           </AppText>
         </View>
 
-        {/* Map Preview Box */}
         <TouchableOpacity
           activeOpacity={0.85}
           onPress={() => setMapPickerOpen(true)}
@@ -307,21 +394,12 @@ export default function CreatePostScreen() {
             <Ionicons name="location" size={18} color={COLORS.textInverse} />
           </View>
           <View style={styles.mapGhimPill}>
-            <AppText variant="caption" semibold color={COLORS.textInverse} style={{ fontSize: 11 }}>
+            <AppText variant="caption" semibold color={COLORS.textPrimary} style={{ fontSize: 11 }}>
               {location ? location.locationName : 'Chạm để mở bản đồ & ghim vị trí'}
-            </AppText>
-          </View>
-          <View style={styles.mapFullBtn}>
-            <Ionicons name="expand-outline" size={13} color={COLORS.primary} />
-            <AppText variant="caption" semibold color={COLORS.primary} style={{ marginLeft: 4, fontSize: 11 }}>
-              Bản đồ
             </AppText>
           </View>
         </TouchableOpacity>
 
-        <AppText variant="caption" semibold color={COLORS.textSecondary} style={{ marginTop: SPACING.sm }}>
-          Điểm mốc Tổ dân phố (chọn nhanh)
-        </AppText>
         <View style={styles.landmarkRow}>
           {QUICK_LANDMARKS.map((lm) => {
             const active = location?.locationName === lm.locationName;
@@ -344,40 +422,20 @@ export default function CreatePostScreen() {
         </View>
       </AppCard>
 
-      {/* Title & Content */}
-      <AppCard style={styles.inputCard}>
-        <AppText variant="label" color={COLORS.textPrimary} style={styles.inputLabel}>
-          Tiêu đề bài viết
-        </AppText>
-        <TextInput
-          style={styles.titleInput}
-          placeholder="Nhập tiêu đề ngắn gọn (không bắt buộc)..."
-          placeholderTextColor={COLORS.textMuted}
-          value={title}
-          onChangeText={setTitle}
-        />
-
-        <View style={[styles.sectionTitleRow, { marginTop: SPACING.md }]}>
-          <AppText variant="label" color={COLORS.textPrimary}>
-            Nội dung chi tiết <AppText variant="label" color={COLORS.danger}>*</AppText>
-          </AppText>
-          <AppText variant="caption" color={COLORS.textMuted}>
-            {content.length}/500 ký tự
-          </AppText>
-        </View>
-        <TextInput
-          style={styles.contentInput}
-          placeholder="Chia sẻ thông tin, tin tức hoặc hoạt động với cư dân Tổ dân phố..."
-          placeholderTextColor={COLORS.textMuted}
-          multiline
-          maxLength={500}
-          textAlignVertical="top"
-          value={content}
-          onChangeText={setContent}
-        />
-      </AppCard>
-
-      {canOfficer && (
+      {/* Options */}
+      {isReportMode ? (
+        <AppCard style={styles.optionsCard}>
+          <View style={styles.switchRow}>
+            <View style={{ flex: 1 }}>
+              <AppText variant="body" semibold>Gửi phản ánh ẩn danh</AppText>
+              <AppText variant="caption" color={COLORS.textSecondary}>
+                Chỉ Tổ trưởng & Công an khu vực xem được thông tin cá nhân
+              </AppText>
+            </View>
+            <Switch value={isPrivateReport} onValueChange={setIsPrivateReport} trackColor={{ true: COLORS.primary }} />
+          </View>
+        </AppCard>
+      ) : canOfficer ? (
         <AppCard style={styles.optionsCard}>
           <View style={styles.switchRow}>
             <View style={{ flex: 1 }}>
@@ -400,12 +458,12 @@ export default function CreatePostScreen() {
             </View>
           )}
         </AppCard>
-      )}
+      ) : null}
 
       <AppButton
-        title="Đăng bài lên bảng tin"
+        title={isReportMode ? 'Đăng phản ánh sự cố' : 'Đăng bài lên bảng tin'}
         onPress={handleSubmit}
-        loading={createPost.isPending}
+        loading={createPost.isPending || createReport.isPending}
         fullWidth
         icon={<Ionicons name="paper-plane-outline" size={18} color={COLORS.textInverse} />}
       />
@@ -423,17 +481,6 @@ export default function CreatePostScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   content: { padding: SPACING.lg, gap: SPACING.md, paddingBottom: 40 },
-  topMetaRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  neighborhoodBadge: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  greenDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: COLORS.secondary },
-  draftBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.primaryLight,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: RADIUS.full,
-  },
   authorCard: { flexDirection: 'row', alignItems: 'center', padding: SPACING.md },
   authorInfo: { marginLeft: SPACING.md },
   sectionBlock: { gap: SPACING.sm },
@@ -449,7 +496,28 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
   },
-  catChipActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
+  catChipActive: { backgroundColor: COLORS.primaryLight, borderColor: COLORS.primary },
+  catChipReportActive: { backgroundColor: COLORS.dangerLight, borderColor: COLORS.danger },
+  reportSubCard: { padding: SPACING.md, borderColor: '#5C262E' },
+
+  inputCard: { gap: SPACING.sm },
+  titleInput: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: COLORS.textPrimary,
+    backgroundColor: COLORS.surfaceAlt,
+    borderRadius: RADIUS.md,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: 10,
+  },
+  contentInput: {
+    fontSize: 15,
+    color: COLORS.textPrimary,
+    backgroundColor: COLORS.surfaceAlt,
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
+    minHeight: 120,
+  },
 
   mediaActionGrid: { flexDirection: 'row', gap: SPACING.sm },
   mediaActionCard: {
@@ -475,17 +543,6 @@ const styles = StyleSheet.create({
   thumbGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm, marginTop: 4 },
   thumbWrap: { position: 'relative', width: '48%' },
   thumb: { width: '100%', height: 110, borderRadius: RADIUS.lg },
-  thumbOverlayBadge: {
-    position: 'absolute',
-    left: 6,
-    bottom: 6,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(15,23,42,0.72)',
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    borderRadius: RADIUS.sm,
-  },
   removeBtn: { position: 'absolute', top: 4, right: 4 },
 
   locationCard: { gap: SPACING.sm },
@@ -506,41 +563,28 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.md,
   },
   mapPreviewBox: {
-    height: 116,
+    height: 100,
     borderRadius: RADIUS.lg,
     backgroundColor: COLORS.surfaceAlt,
     borderWidth: 1,
     borderColor: COLORS.border,
     alignItems: 'center',
     justifyContent: 'center',
-    position: 'relative',
-    overflow: 'hidden',
   },
   mapPinBadge: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: COLORS.primary,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 6,
   },
   mapGhimPill: {
-    backgroundColor: '#131B2E',
+    backgroundColor: COLORS.surface,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: RADIUS.full,
-  },
-  mapFullBtn: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.surface,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: RADIUS.md,
   },
   landmarkRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   landmarkChip: {
@@ -554,26 +598,6 @@ const styles = StyleSheet.create({
   landmarkChipActive: {
     backgroundColor: COLORS.primaryLight,
     borderColor: COLORS.primary,
-  },
-
-  inputCard: { gap: SPACING.xs },
-  inputLabel: { marginBottom: 4 },
-  titleInput: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: COLORS.textPrimary,
-    backgroundColor: COLORS.surfaceAlt,
-    borderRadius: RADIUS.md,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: 10,
-  },
-  contentInput: {
-    fontSize: 15,
-    color: COLORS.textPrimary,
-    backgroundColor: COLORS.surfaceAlt,
-    borderRadius: RADIUS.md,
-    padding: SPACING.md,
-    minHeight: 110,
   },
   optionsCard: { gap: SPACING.xs },
   switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: SPACING.md },
