@@ -10,6 +10,9 @@ const getDevApiUrl = () => {
   const hostUri = Constants.expoConfig?.hostUri;
   if (hostUri) {
     const ip = hostUri.split(':')[0];
+    if (Platform.OS === 'android' && (ip === 'localhost' || ip === '127.0.0.1')) {
+      return 'http://10.0.2.2:3000';
+    }
     return `http://${ip}:3000`;
   }
   if (Platform.OS === 'android') {
