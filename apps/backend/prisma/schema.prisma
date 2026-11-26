@@ -75,6 +75,7 @@ enum PostCategory {
 
 enum PostVisibility {
   PUBLIC
+  PRIVATE
   OFFICERS_ONLY
 }
 
@@ -98,10 +99,23 @@ enum ReportVisibility {
 }
 
 enum ReportStatus {
+  NEW
   PENDING
+  ACCEPTED
   IN_PROGRESS
   RESOLVED
   REJECTED
+}
+
+enum PostType {
+  NORMAL
+  INCIDENT
+}
+
+enum ReportPriority {
+  NORMAL
+  HIGH
+  URGENT
 }
 
 enum AnnouncementPriority {
@@ -212,6 +226,8 @@ model User {
   householdMember  HouseholdMember?
 
   posts            Post[]
+  postEdits        PostEditHistory[]
+  postContentReports PostReport[]
   comments         Comment[]
   reactions        Reaction[]
   submittedReports Report[]           @relation("ReportCreator")
@@ -372,6 +388,7 @@ model Post {
   neighborhood   Neighborhood   @relation(fields: [neighborhoodId], references: [id])
   authorId       String
   author         User           @relation(fields: [authorId], references: [id])
+  type           PostType       @default(NORMAL)
   category       PostCategory   @default(LIFE)
   visibility     PostVisibility @default(PUBLIC)
   title          String?
@@ -387,9 +404,42 @@ model Post {
 
   comments       Comment[]
   reactions      Reaction[]
+  incidentReport Report?
+  editHistories  PostEditHistory[]
+  contentReports PostReport[]
 
   @@index([neighborhoodId, isPinned(sort: Desc), createdAt(sort: Desc)])
   @@map("posts")
+}
+
+model PostEditHistory {
+  id         String   @id @default(uuid())
+  postId     String
+  post       Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  editorId   String
+  editor     User     @relation(fields: [editorId], references: [id])
+  oldTitle   String?
+  oldContent String
+  newTitle   String?
+  newContent String
+  createdAt  DateTime @default(now())
+
+  @@index([postId, createdAt(sort: Desc)])
+  @@map("post_edit_histories")
+}
+
+model PostReport {
+  id         String   @id @default(uuid())
+  postId     String
+  post       Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  reporterId String
+  reporter   User     @relation(fields: [reporterId], references: [id])
+  reason     String
+  status     String   @default("PENDING")
+  createdAt  DateTime @default(now())
+
+  @@unique([postId, reporterId])
+  @@map("post_reports")
 }
 
 model Comment {
@@ -425,6 +475,9 @@ model Reaction {
 
 model Report {
   id             String           @id @default(uuid())
+  code           String?          @unique
+  postId         String?          @unique
+  post           Post?            @relation(fields: [postId], references: [id], onDelete: SetNull)
   neighborhoodId String
   neighborhood   Neighborhood     @relation(fields: [neighborhoodId], references: [id])
   reporterId     String
@@ -432,10 +485,11 @@ model Report {
   assignedToId   String?
   assignedTo     User?            @relation("ReportAssignee", fields: [assignedToId], references: [id])
   category       ReportCategory   @default(OTHER)
+  priority       ReportPriority   @default(NORMAL)
   visibility     ReportVisibility @default(PUBLIC)
   title          String
   description    String
-  status         ReportStatus     @default(PENDING)
+  status         ReportStatus     @default(NEW)
   latitude       Float?
   longitude      Float?
   addressText    String?

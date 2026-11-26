@@ -46,6 +46,11 @@ export enum HouseholdRelation {
   KHAC = 'KHAC',
 }
 
+export enum PostType {
+  NORMAL = 'NORMAL',
+  INCIDENT = 'INCIDENT',
+}
+
 export enum PostCategory {
   LIFE = 'LIFE',
   WARNING = 'WARNING',
@@ -54,6 +59,7 @@ export enum PostCategory {
 
 export enum PostVisibility {
   PUBLIC = 'PUBLIC',
+  PRIVATE = 'PRIVATE',
   OFFICERS_ONLY = 'OFFICERS_ONLY',
 }
 
@@ -65,13 +71,21 @@ export enum ReportCategory {
   OTHER = 'OTHER',
 }
 
+export enum ReportPriority {
+  NORMAL = 'NORMAL',
+  HIGH = 'HIGH',
+  URGENT = 'URGENT',
+}
+
 export enum ReportVisibility {
   PUBLIC = 'PUBLIC',
   PRIVATE = 'PRIVATE',
 }
 
 export enum ReportStatus {
+  NEW = 'NEW',
   PENDING = 'PENDING',
+  ACCEPTED = 'ACCEPTED',
   IN_PROGRESS = 'IN_PROGRESS',
   RESOLVED = 'RESOLVED',
   REJECTED = 'REJECTED',

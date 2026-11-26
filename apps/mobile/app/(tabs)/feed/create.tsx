@@ -14,34 +14,46 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
-import { PostCategory } from '@todanpho/shared';
+import {
+  PostCategory,
+  PostType,
+  ReportCategory,
+  ReportPriority,
+  ReportVisibility,
+} from '@todanpho/shared';
 import { COLORS, RADIUS, SPACING } from '@/constants/theme';
 import { AppButton, AppCard, AppText, Avatar } from '@/components';
 import {
   LocationPickerModal,
   SelectedLocation,
 } from '@/components/LocationPickerModal';
-import { useCreatePost, useCreateReport } from '@/services/feedService';
+import { useCreatePost } from '@/services/feedService';
 import { isLeaderRole, isOfficerRole, useAuthStore } from '@/store/useAuthStore';
 import { getRoleLabel } from '@/utils/date';
 
 type ComposerTopic =
   | { kind: 'POST'; category: PostCategory; label: string; icon: keyof typeof Ionicons.glyphMap }
-  | { kind: 'REPORT'; category: string; label: string; icon: keyof typeof Ionicons.glyphMap };
+  | { kind: 'REPORT'; label: string; icon: keyof typeof Ionicons.glyphMap };
 
 const TOPICS: ComposerTopic[] = [
   { kind: 'POST', category: PostCategory.LIFE, label: 'Tin tức / Đời sống', icon: 'sunny-outline' },
-  { kind: 'REPORT', category: 'INFRASTRUCTURE', label: 'Phản ánh sự cố', icon: 'warning-outline' },
+  { kind: 'REPORT', label: 'Phản ánh sự cố', icon: 'warning-outline' },
   { kind: 'POST', category: PostCategory.WARNING, label: 'Cảnh báo khẩn', icon: 'alert-circle-outline' },
   { kind: 'POST', category: PostCategory.EVENT_RECAP, label: 'Hoạt động tổ', icon: 'people-outline' },
 ];
 
-const REPORT_SUBCATEGORIES = [
-  { key: 'INFRASTRUCTURE', label: 'Hạ tầng / Đường ngõ' },
-  { key: 'LIGHTING', label: 'Đèn chiếu sáng' },
-  { key: 'SANITATION', label: 'Rác thải / Vệ sinh' },
-  { key: 'SECURITY', label: 'An ninh trật tự' },
-  { key: 'OTHER', label: 'Khác' },
+const REPORT_SUBCATEGORIES: { key: ReportCategory; label: string }[] = [
+  { key: ReportCategory.INFRASTRUCTURE, label: 'Hạ tầng / Đường ngõ' },
+  { key: ReportCategory.LIGHTING, label: 'Đèn chiếu sáng' },
+  { key: ReportCategory.SANITATION, label: 'Rác thải / Vệ sinh' },
+  { key: ReportCategory.SECURITY, label: 'An ninh trật tự' },
+  { key: ReportCategory.OTHER, label: 'Khác' },
+];
+
+const PRIORITIES: { key: ReportPriority; label: string }[] = [
+  { key: ReportPriority.NORMAL, label: 'Bình thường' },
+  { key: ReportPriority.HIGH, label: 'Cần xử lý sớm' },
+  { key: ReportPriority.URGENT, label: 'Khẩn cấp' },
 ];
 
 const QUICK_LANDMARKS: SelectedLocation[] = [
@@ -59,7 +71,8 @@ export default function UnifiedCreateScreen() {
   const canLead = isLeaderRole(user?.role);
 
   const [selectedTopicIdx, setSelectedTopicIdx] = useState(params.mode === 'REPORT' ? 1 : 0);
-  const [reportSubCat, setReportSubCat] = useState('INFRASTRUCTURE');
+  const [reportSubCat, setReportSubCat] = useState<ReportCategory>(ReportCategory.INFRASTRUCTURE);
+  const [priority, setPriority] = useState<ReportPriority>(ReportPriority.NORMAL);
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [mediaUrls, setMediaUrls] = useState<string[]>([]);
@@ -72,7 +85,6 @@ export default function UnifiedCreateScreen() {
   const [isPinned, setIsPinned] = useState(false);
 
   const createPost = useCreatePost();
-  const createReport = useCreateReport();
 
   useEffect(() => {
     if (params.mode === 'REPORT') setSelectedTopicIdx(1);
@@ -133,53 +145,48 @@ export default function UnifiedCreateScreen() {
   };
 
   const handleSubmit = () => {
-    if (isReportMode) {
-      if (!title.trim() || !content.trim()) {
-        Alert.alert('Thiếu thông tin', 'Khi phản ánh sự cố, vui lòng nhập tiêu đề và mô tả chi tiết.');
-        return;
-      }
-      createReport.mutate(
-        {
-          title: title.trim(),
-          description: content.trim(),
-          category: reportSubCat,
-          visibility: isPrivateReport ? 'PRIVATE' : 'PUBLIC',
-          addressText: location?.locationName,
-          latitude: isPrivateReport ? undefined : location?.latitude,
-          longitude: isPrivateReport ? undefined : location?.longitude,
-        },
-        {
-          onSuccess: () => {
-            Alert.alert('Đã gửi phản ánh', 'Ban điều hành tổ sẽ tiếp nhận và hiển thị trên bảng tin.');
-            router.back();
-          },
-          onError: (err: any) => {
-            Alert.alert('Lỗi', err?.response?.data?.message || 'Không thể gửi phản ánh');
-          },
-        },
-      );
+    if (isReportMode && (!title.trim() || content.trim().length < 2)) {
+      Alert.alert('Thiếu thông tin', 'Khi phản ánh sự cố, vui lòng nhập tiêu đề và mô tả chi tiết.');
       return;
     }
 
-    if (content.trim().length < 2) {
+    if (!isReportMode && content.trim().length < 2) {
       Alert.alert('Thiếu nội dung', 'Vui lòng nhập nội dung bài viết (tối thiểu 2 ký tự).');
       return;
     }
 
     createPost.mutate(
       {
+        type: isReportMode ? PostType.INCIDENT : PostType.NORMAL,
         title: title.trim() || undefined,
         content: content.trim(),
-        category: activeTopic.category,
-        isOfficial: canOfficer ? isOfficial : false,
-        isPinned: canLead ? isPinned : false,
+        category: activeTopic.kind === 'POST' ? activeTopic.category : PostCategory.WARNING,
+        isOfficial: !isReportMode && canOfficer ? isOfficial : false,
+        isPinned: !isReportMode && canLead ? isPinned : false,
         locationName: location?.locationName,
         latitude: location?.latitude,
         longitude: location?.longitude,
         mediaUrls,
+        ...(isReportMode
+          ? {
+              incidentCategory: reportSubCat,
+              incidentPriority: priority,
+              incidentVisibility: isPrivateReport
+                ? ReportVisibility.PRIVATE
+                : ReportVisibility.PUBLIC,
+            }
+          : {}),
       },
       {
-        onSuccess: () => router.back(),
+        onSuccess: (created) => {
+          if (isReportMode) {
+            Alert.alert(
+              'Đã gửi phản ánh',
+              `Mã phản ánh ${created.incidentReport?.code || ''} đã được ghi nhận và thông báo cho Ban điều hành.`,
+            );
+          }
+          router.back();
+        },
         onError: (err: any) => {
           Alert.alert('Lỗi', err?.response?.data?.message || 'Không thể đăng bài viết');
         },
@@ -205,12 +212,10 @@ export default function UnifiedCreateScreen() {
         </View>
       </AppCard>
 
-      {/* Unified Topic Selector (Bài viết + Phản ánh sự cố chung 1 chỗ) */}
+      {/* Unified Topic Selector */}
       <View style={styles.sectionBlock}>
         <View style={styles.sectionTitleRow}>
-          <AppText variant="label" color={COLORS.textPrimary}>
-            Chủ đề bài viết
-          </AppText>
+          <AppText variant="label" color={COLORS.textPrimary}>Chủ đề bài viết</AppText>
           <AppText variant="caption" color={COLORS.primary}>Chọn 1 loại</AppText>
         </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.catScroll}>
@@ -245,9 +250,33 @@ export default function UnifiedCreateScreen() {
         </ScrollView>
       </View>
 
-      {/* Sub-category if Phản ánh sự cố is selected */}
+      {/* Incident details when Phản ánh sự cố is selected */}
       {isReportMode && (
         <AppCard style={styles.reportSubCard}>
+          <AppText variant="label" color={COLORS.danger} style={{ marginBottom: 8 }}>
+            Mức độ khẩn thiết
+          </AppText>
+          <View style={[styles.landmarkRow, { marginBottom: SPACING.md }]}>
+            {PRIORITIES.map((p) => {
+              const active = priority === p.key;
+              return (
+                <TouchableOpacity
+                  key={p.key}
+                  onPress={() => setPriority(p.key)}
+                  style={[styles.landmarkChip, active && styles.priorityActive]}
+                >
+                  <AppText
+                    variant="caption"
+                    color={active ? COLORS.warning : COLORS.textSecondary}
+                    semibold={active}
+                  >
+                    {p.label}
+                  </AppText>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
           <AppText variant="label" color={COLORS.danger} style={{ marginBottom: 8 }}>
             Hạng mục sự cố hiện trường
           </AppText>
@@ -274,7 +303,7 @@ export default function UnifiedCreateScreen() {
         </AppCard>
       )}
 
-      {/* Facebook-style Text Composer */}
+      {/* Text Composer */}
       <AppCard style={styles.inputCard}>
         <TextInput
           style={styles.titleInput}
@@ -427,9 +456,9 @@ export default function UnifiedCreateScreen() {
         <AppCard style={styles.optionsCard}>
           <View style={styles.switchRow}>
             <View style={{ flex: 1 }}>
-              <AppText variant="body" semibold>Gửi phản ánh ẩn danh</AppText>
+              <AppText variant="body" semibold>Gửi phản ánh riêng tư</AppText>
               <AppText variant="caption" color={COLORS.textSecondary}>
-                Chỉ Tổ trưởng & Công an khu vực xem được thông tin cá nhân
+                Chỉ bạn và Tổ trưởng / Cán bộ phụ trách xem được (không hiển thị công khai)
               </AppText>
             </View>
             <Switch value={isPrivateReport} onValueChange={setIsPrivateReport} trackColor={{ true: COLORS.primary }} />
@@ -463,7 +492,7 @@ export default function UnifiedCreateScreen() {
       <AppButton
         title={isReportMode ? 'Đăng phản ánh sự cố' : 'Đăng bài lên bảng tin'}
         onPress={handleSubmit}
-        loading={createPost.isPending || createReport.isPending}
+        loading={createPost.isPending}
         fullWidth
         icon={<Ionicons name="paper-plane-outline" size={18} color={COLORS.textInverse} />}
       />
@@ -598,6 +627,10 @@ const styles = StyleSheet.create({
   landmarkChipActive: {
     backgroundColor: COLORS.primaryLight,
     borderColor: COLORS.primary,
+  },
+  priorityActive: {
+    backgroundColor: COLORS.warningLight,
+    borderColor: COLORS.warning,
   },
   optionsCard: { gap: SPACING.xs },
   switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: SPACING.md },

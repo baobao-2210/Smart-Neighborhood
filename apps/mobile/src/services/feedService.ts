@@ -1,4 +1,6 @@
+import { useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { io } from 'socket.io-client';
 import {
   CreateCommentPayload,
   CreatePostPayload,
@@ -6,8 +8,10 @@ import {
   PostComment,
   PostItem,
   ReactionType,
+  ReportPostPayload,
+  UpdatePostPayload,
 } from '@todanpho/shared';
-import { apiClient } from './apiClient';
+import { API_BASE_URL, apiClient } from './apiClient';
 import { useAuthStore } from '@/store/useAuthStore';
 
 export const FEED_KEYS = {
@@ -17,6 +21,45 @@ export const FEED_KEYS = {
   detail: (id: string) => ['feed-post', id] as const,
   reports: ['feed-reports'] as const,
 };
+
+export function useFeedRealtime() {
+  const queryClient = useQueryClient();
+  const { isAuthenticated, accessToken } = useAuthStore();
+
+  useEffect(() => {
+    if (!isAuthenticated || !accessToken) return;
+
+    const socket = io(`${API_BASE_URL}/ws/feed`, {
+      auth: { token: accessToken },
+      transports: ['websocket'],
+    });
+
+    const invalidateFeed = () => {
+      queryClient.invalidateQueries({ queryKey: FEED_KEYS.all });
+      queryClient.invalidateQueries({ queryKey: FEED_KEYS.reports });
+    };
+
+    const events = [
+      'post.created',
+      'post.updated',
+      'post.deleted',
+      'post.liked',
+      'post.commented',
+      'incident.created',
+      'incident.accepted',
+      'incident.assigned',
+      'incident.status_changed',
+      'incident.resolved',
+    ];
+
+    events.forEach((evt) => socket.on(evt, invalidateFeed));
+
+    return () => {
+      events.forEach((evt) => socket.off(evt, invalidateFeed));
+      socket.disconnect();
+    };
+  }, [isAuthenticated, accessToken, queryClient]);
+}
 
 export function useFeedPosts(filter: FeedFilterType, search: string) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -87,6 +130,27 @@ export function useCreatePost() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: FEED_KEYS.all });
+      queryClient.invalidateQueries({ queryKey: FEED_KEYS.reports });
+    },
+  });
+}
+
+export function useUpdatePost() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      postId,
+      payload,
+    }: {
+      postId: string;
+      payload: UpdatePostPayload;
+    }) => {
+      const res = await apiClient.patch(`/api/v1/posts/${postId}`, payload);
+      return res.data.data as PostItem;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: FEED_KEYS.all });
+      queryClient.invalidateQueries({ queryKey: FEED_KEYS.detail(variables.postId) });
     },
   });
 }
@@ -124,6 +188,21 @@ export function useAddComment() {
   });
 }
 
+export function useReportPost() {
+  return useMutation({
+    mutationFn: async ({
+      postId,
+      payload,
+    }: {
+      postId: string;
+      payload: ReportPostPayload;
+    }) => {
+      const res = await apiClient.post(`/api/v1/posts/${postId}/report`, payload);
+      return res.data.data;
+    },
+  });
+}
+
 export function useTogglePinPost() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -145,6 +224,7 @@ export function useDeletePost() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: FEED_KEYS.all });
+      queryClient.invalidateQueries({ queryKey: FEED_KEYS.reports });
     },
   });
 }
@@ -184,6 +264,21 @@ export function useCreateReport() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: FEED_KEYS.reports });
+      queryClient.invalidateQueries({ queryKey: FEED_KEYS.all });
+    },
+  });
+}
+
+export function useAcceptReport() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ reportId, note }: { reportId: string; note?: string }) => {
+      const res = await apiClient.patch(`/api/v1/reports/${reportId}/accept`, { note });
+      return res.data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: FEED_KEYS.reports });
+      queryClient.invalidateQueries({ queryKey: FEED_KEYS.all });
     },
   });
 }
@@ -208,6 +303,7 @@ export function useUpdateReportStatus() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: FEED_KEYS.reports });
+      queryClient.invalidateQueries({ queryKey: FEED_KEYS.all });
     },
   });
 }

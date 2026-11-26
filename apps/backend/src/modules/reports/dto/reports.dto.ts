@@ -13,6 +13,7 @@ import {
 } from 'class-validator';
 import {
   ReportCategory,
+  ReportPriority,
   ReportStatus,
   ReportVisibility,
 } from '@todanpho/shared';
@@ -64,6 +65,11 @@ export class CreateReportDto {
   @IsEnum(ReportCategory)
   category?: ReportCategory = ReportCategory.OTHER;
 
+  @ApiPropertyOptional({ enum: ReportPriority, default: ReportPriority.NORMAL })
+  @IsOptional()
+  @IsEnum(ReportPriority)
+  priority?: ReportPriority = ReportPriority.NORMAL;
+
   @ApiPropertyOptional({ enum: ReportVisibility, default: ReportVisibility.PUBLIC })
   @IsOptional()
   @IsEnum(ReportVisibility)
@@ -84,7 +90,7 @@ export class CreateReportDto {
   @IsString()
   addressText?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ type: [String] })
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
@@ -99,7 +105,19 @@ export class UpdateReportStatusDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
+  note?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
   assignedToId?: string;
+}
+
+export class AssignReportDto {
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  assignedToId!: string;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -107,3 +125,9 @@ export class UpdateReportStatusDto {
   note?: string;
 }
 
+export class AcceptReportDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  note?: string;
+}

@@ -22,6 +22,8 @@ interface FeedPostCardProps {
   onPressDetail?: () => void;
   onReact: (type: ReactionType) => void;
   onTogglePin?: () => void;
+  onEdit?: () => void;
+  onReportPost?: () => void;
   onDelete?: () => void;
   showFullContent?: boolean;
 }
@@ -42,6 +44,8 @@ export function FeedPostCard({
   onPressDetail,
   onReact,
   onTogglePin,
+  onEdit,
+  onReportPost,
   onDelete,
   showFullContent = false,
 }: FeedPostCardProps) {
@@ -56,10 +60,22 @@ export function FeedPostCard({
       style?: 'destructive' | 'cancel';
     }[] = [];
 
+    if (post.authorId === currentUser?.id && onEdit) {
+      options.push({
+        text: 'Chỉnh sửa bài viết',
+        onPress: onEdit,
+      });
+    }
     if (canLead && onTogglePin) {
       options.push({
         text: post.isPinned ? 'Bỏ ghim bài viết' : 'Ghim lên đầu bảng tin',
         onPress: onTogglePin,
+      });
+    }
+    if (post.authorId !== currentUser?.id && onReportPost) {
+      options.push({
+        text: 'Báo cáo bài viết vi phạm',
+        onPress: onReportPost,
       });
     }
     if (canDelete && onDelete) {
@@ -109,7 +125,14 @@ export function FeedPostCard({
                 style={styles.officialBadge}
               />
             )}
-            {post.category === PostCategory.WARNING && (
+            {post.incidentReport && (
+              <Badge
+                label={`${post.incidentReport.code || 'Sự cố'} • ${post.incidentReport.status}`}
+                tone="danger"
+                style={styles.officialBadge}
+              />
+            )}
+            {post.category === PostCategory.WARNING && !post.incidentReport && (
               <Badge
                 label="Cảnh báo"
                 tone="danger"
@@ -123,11 +146,9 @@ export function FeedPostCard({
           </AppText>
         </View>
 
-        {(canLead || canDelete) && (
-          <TouchableOpacity onPress={handleMoreActions} hitSlop={10}>
-            <Ionicons name="ellipsis-horizontal" size={20} color={COLORS.textSecondary} />
-          </TouchableOpacity>
-        )}
+        <TouchableOpacity onPress={handleMoreActions} hitSlop={10}>
+          <Ionicons name="ellipsis-horizontal" size={20} color={COLORS.textSecondary} />
+        </TouchableOpacity>
       </View>
 
       {/* Content */}

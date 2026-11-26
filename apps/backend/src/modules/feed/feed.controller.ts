@@ -18,7 +18,9 @@ import {
   CreateCommentDto,
   CreatePostDto,
   FeedQueryDto,
+  ReportPostDto,
   ToggleReactionDto,
+  UpdatePostDto,
 } from './dto/feed.dto';
 
 @ApiTags('Feed (Module 1)')
@@ -59,6 +61,15 @@ export class FeedController {
     return this.feedService.createPost(dto, this.toContext(user));
   }
 
+  @Patch(':id')
+  updatePost(
+    @Param('id') id: string,
+    @Body() dto: UpdatePostDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.feedService.updatePost(id, dto, this.toContext(user));
+  }
+
   @Post(':id/reactions')
   toggleReaction(
     @Param('id') id: string,
@@ -75,6 +86,15 @@ export class FeedController {
     @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.feedService.addComment(id, dto, this.toContext(user));
+  }
+
+  @Post(':id/report')
+  reportPost(
+    @Param('id') id: string,
+    @Body() dto: ReportPostDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.feedService.reportPost(id, dto, this.toContext(user));
   }
 
   @Patch(':id/pin')

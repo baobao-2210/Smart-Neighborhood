@@ -20,6 +20,7 @@ import { FeedPostCard } from '@/components/FeedPostCard';
 import {
   useDeletePost,
   useFeedPosts,
+  useFeedRealtime,
   useReports,
   useTogglePinPost,
   useToggleReaction,
@@ -52,6 +53,7 @@ export default function FeedScreen() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const isOfficer = isOfficerRole(user?.role);
+  useFeedRealtime();
 
   const [filter, setFilter] = useState<FeedFilterType | 'REPORTS_ONLY'>('ALL');
   const [search, setSearch] = useState('');
@@ -66,8 +68,10 @@ export default function FeedScreen() {
   const updateReportStatus = useUpdateReportStatus();
 
   const unifiedFeed = useMemo<UnifiedItem[]>(() => {
+    const linkedPostIds = new Set(posts.map((p) => p.id));
     const q = search.trim().toLowerCase();
-    const filteredReports = reports.filter((r: any) => {
+    const standaloneReports = reports.filter((r: any) => {
+      if (r.postId && linkedPostIds.has(r.postId)) return false;
       if (!q) return true;
       return (
         r.title?.toLowerCase().includes(q) ||
@@ -77,12 +81,23 @@ export default function FeedScreen() {
     });
 
     if (filter === 'REPORTS_ONLY') {
-      return filteredReports.map((r: any) => ({
+      const incidentPosts: UnifiedItem[] = posts
+        .filter((p) => Boolean(p.incidentReport))
+        .map((p) => ({
+          kind: 'POST' as const,
+          id: `post-${p.id}`,
+          createdAt: p.createdAt,
+          data: p,
+        }));
+      const legacyReports: UnifiedItem[] = standaloneReports.map((r: any) => ({
         kind: 'REPORT' as const,
         id: `report-${r.id}`,
         createdAt: r.createdAt,
         data: r,
       }));
+      return [...incidentPosts, ...legacyReports].sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+      );
     }
 
     const postItems: UnifiedItem[] = posts.map((p) => ({
@@ -93,7 +108,7 @@ export default function FeedScreen() {
     }));
 
     if (filter === 'ALL') {
-      const reportItems: UnifiedItem[] = filteredReports.map((r: any) => ({
+      const reportItems: UnifiedItem[] = standaloneReports.map((r: any) => ({
         kind: 'REPORT' as const,
         id: `report-${r.id}`,
         createdAt: r.createdAt,

@@ -15,6 +15,8 @@ import {
   Roles,
 } from '../../common/decorators/auth.decorators';
 import {
+  AcceptReportDto,
+  AssignReportDto,
   CreateReportDto,
   ReportQueryDto,
   UpdateReportStatusDto,
@@ -52,6 +54,26 @@ export class ReportsController {
   }
 
   @Roles(UserRole.SUPER_ADMIN, UserRole.LEADER, UserRole.STAFF)
+  @Patch(':id/accept')
+  acceptReport(
+    @Param('id') id: string,
+    @Body() dto: AcceptReportDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.reportsService.acceptReport(id, dto, user);
+  }
+
+  @Roles(UserRole.SUPER_ADMIN, UserRole.LEADER)
+  @Patch(':id/assign')
+  assignReport(
+    @Param('id') id: string,
+    @Body() dto: AssignReportDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.reportsService.assignReport(id, dto, user);
+  }
+
+  @Roles(UserRole.SUPER_ADMIN, UserRole.LEADER, UserRole.STAFF)
   @Patch(':id/status')
   updateStatus(
     @Param('id') id: string,
@@ -61,4 +83,3 @@ export class ReportsController {
     return this.reportsService.updateStatus(id, dto, user);
   }
 }
-
