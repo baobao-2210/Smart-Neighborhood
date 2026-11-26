@@ -29,15 +29,12 @@ interface FeedPostCardProps {
   showFullContent?: boolean;
 }
 
-const REACTIONS: {
-  type: ReactionType;
-  icon: keyof typeof Ionicons.glyphMap;
-  label: string;
-  color: string;
-}[] = [
-  { type: 'LIKE', icon: 'thumbs-up', label: 'Thích', color: COLORS.primary },
-  { type: 'HEART', icon: 'heart', label: 'Tim', color: COLORS.danger },
-];
+// Gộp Thích và Tim thành một nút tương tác duy nhất
+const PRIMARY_REACTION = {
+  icon: 'heart' as keyof typeof Ionicons.glyphMap,
+  label: 'Thích',
+  color: COLORS.danger,
+};
 
 export function FeedPostCard({
   post,
@@ -223,30 +220,31 @@ export function FeedPostCard({
       {/* Actions */}
       <View style={styles.actionBar}>
         <View style={styles.reactionGroup}>
-          {REACTIONS.map((item) => {
-            const active = post.userReaction === item.type;
+          {(() => {
+            const active = Boolean(post.userReaction);
+            const reactionToToggle: ReactionType =
+              post.userReaction === 'LIKE' ? 'LIKE' : 'HEART';
             return (
               <TouchableOpacity
-                key={item.type}
-                onPress={() => onReact(item.type)}
+                onPress={() => onReact(reactionToToggle)}
                 style={[styles.actionBtn, active && styles.actionBtnActive]}
               >
                 <Ionicons
-                  name={active ? item.icon : (`${item.icon}-outline` as any)}
+                  name={active ? PRIMARY_REACTION.icon : (`${PRIMARY_REACTION.icon}-outline` as any)}
                   size={16}
-                  color={active ? item.color : COLORS.textSecondary}
+                  color={active ? PRIMARY_REACTION.color : COLORS.textSecondary}
                 />
                 <AppText
                   variant="caption"
                   semibold={active}
-                  color={active ? item.color : COLORS.textSecondary}
+                  color={active ? PRIMARY_REACTION.color : COLORS.textSecondary}
                   style={styles.actionLabel}
                 >
-                  {item.label}
+                  {PRIMARY_REACTION.label}
                 </AppText>
               </TouchableOpacity>
             );
-          })}
+          })()}
 
           {onMessageAuthor && post.authorId !== currentUser?.id && (
             <TouchableOpacity onPress={onMessageAuthor} style={styles.actionBtn}>
