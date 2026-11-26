@@ -15,17 +15,17 @@ export const COLORS = {
   danger: '#F43F5E',        // Vibrant Rose/Red
   dangerLight: '#36131D',
 
-  background: '#120F0D',    // Espresso Dark Background
-  surface: '#1D1815',       // Espresso Card Surface
-  surfaceAlt: '#27201C',    // Espresso Input / Inner Card
+  background: '#241D19',    // Warm Light Espresso / Nâu lợt
+  surface: '#302722',       // Warm Mocha Card Surface
+  surfaceAlt: '#3B302A',    // Soft Brown Input / Inner Card
 
-  textPrimary: '#F5F5F4',   // Crisp Warm White
-  textSecondary: '#C4BBB4', // Soft Warm Gray
-  textMuted: '#8C827B',     // Muted Espresso Gray
+  textPrimary: '#FAF7F5',   // Crisp Warm White
+  textSecondary: '#D6CCC5', // Soft Warm Gray
+  textMuted: '#A69990',     // Muted Warm Brown-Gray
   textInverse: '#0B1115',   // Dark text on bright cyan buttons
 
-  border: '#322924',        // Subtle Espresso Border
-  divider: '#29221E',
+  border: '#4D3F37',        // Soft Warm Brown Border
+  divider: '#3E332C',
 } as const;
 
 export const SPACING = {
