@@ -517,6 +517,23 @@ export class FeedService {
       { isPrivate: post.visibility === PostVisibility.PRIVATE, ownerId: post.authorId },
     );
 
+    if (activeType !== null && post.authorId !== user.userId) {
+      const actor = await this.prisma.user.findUnique({
+        where: { id: user.userId },
+        select: { fullName: true },
+      });
+      const notif = await this.prisma.notification.create({
+        data: {
+          userId: post.authorId,
+          type: 'POST_LIKED',
+          title: `${actor?.fullName || 'Một cư dân'} đã thích bài viết của bạn`,
+          body: (post.title || post.content).slice(0, 100),
+          referenceId: post.id,
+        },
+      });
+      this.feedGateway.emitToUser(post.authorId, 'notification.new', notif);
+    }
+
     return { postId, active: activeType !== null, type: activeType };
   }
 
@@ -563,6 +580,19 @@ export class FeedService {
       { postId, comment },
       { isPrivate: post.visibility === PostVisibility.PRIVATE, ownerId: post.authorId },
     );
+
+    if (post.authorId !== user.userId) {
+      const notif = await this.prisma.notification.create({
+        data: {
+          userId: post.authorId,
+          type: 'POST_COMMENTED',
+          title: `${comment.author.fullName} đã bình luận bài viết của bạn`,
+          body: comment.content.slice(0, 100),
+          referenceId: post.id,
+        },
+      });
+      this.feedGateway.emitToUser(post.authorId, 'notification.new', notif);
+    }
 
     return comment;
   }

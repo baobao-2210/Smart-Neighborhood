@@ -7,6 +7,7 @@ import { AttachmentEntityType, UserRole } from '@todanpho/shared';
 import { AuthenticatedUser } from '../../common/decorators/auth.decorators';
 import { PrismaService } from '../../database/prisma.service';
 import { AuditService } from '../audit/audit.service';
+import { FeedGateway } from '../feed/feed.gateway';
 import {
   CreateConversationDto,
   MessageQueryDto,
@@ -20,6 +21,7 @@ export class ChatService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditService: AuditService,
+    private readonly feedGateway: FeedGateway,
   ) {}
 
   async getMyConversations(user: AuthenticatedUser) {
@@ -201,6 +203,24 @@ export class ChatService {
           fileSize: 0,
         })),
       });
+    }
+
+    const recipients = await this.prisma.conversationMember.findMany({
+      where: { conversationId, userId: { not: user.id } },
+      select: { userId: true },
+    });
+
+    for (const r of recipients) {
+      const notif = await this.prisma.notification.create({
+        data: {
+          userId: r.userId,
+          type: 'NEW_MESSAGE',
+          title: `Tin nhắn mới từ ${message.sender.fullName}`,
+          body: message.content.slice(0, 100),
+          referenceId: conversationId,
+        },
+      });
+      this.feedGateway.emitToUser(r.userId, 'notification.new', notif);
     }
 
     return message;

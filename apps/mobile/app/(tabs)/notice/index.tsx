@@ -86,6 +86,24 @@ const NOTIF_META: Record<
     bg: COLORS.secondaryLight,
     label: 'Sự kiện mới',
   },
+  POST_LIKED: {
+    icon: 'heart',
+    color: COLORS.danger,
+    bg: COLORS.dangerLight,
+    label: 'Tương tác bài viết',
+  },
+  POST_COMMENTED: {
+    icon: 'chatbubble',
+    color: COLORS.primary,
+    bg: COLORS.primaryLight,
+    label: 'Bình luận mới',
+  },
+  NEW_MESSAGE: {
+    icon: 'paper-plane',
+    color: COLORS.secondary,
+    bg: COLORS.secondaryLight,
+    label: 'Tin nhắn mới',
+  },
 };
 
 function formatDateTimeVi(iso: string) {
@@ -226,7 +244,11 @@ export default function NoticeScreen() {
     if (!item.isRead) {
       markNotifRead.mutate(item.id);
     }
-    if (item.type === 'ANNOUNCEMENT') {
+    if ((item.type === 'POST_LIKED' || item.type === 'POST_COMMENTED') && item.referenceId) {
+      router.push(`/(tabs)/feed/post/${item.referenceId}` as any);
+    } else if (item.type === 'NEW_MESSAGE' && item.referenceId) {
+      router.push(`/(tabs)/connect/${item.referenceId}` as any);
+    } else if (item.type === 'ANNOUNCEMENT') {
       setTab('ANNOUNCEMENTS');
     } else if (item.type === 'EVENT_CREATED') {
       setTab('EVENTS');

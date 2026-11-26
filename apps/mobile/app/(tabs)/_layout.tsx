@@ -1,7 +1,9 @@
 import React from 'react';
+import { View } from 'react-native';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '@/constants/theme';
+import { InAppNotificationBanner } from '@/components/InAppNotificationBanner';
 import { useMyNotifications } from '@/services/noticeService';
 
 export default function TabsLayout() {
@@ -9,8 +11,10 @@ export default function TabsLayout() {
   const unreadCount = notifData?.unreadCount ?? 0;
 
   return (
-    <Tabs
-      screenOptions={{
+    <View style={{ flex: 1 }}>
+      <InAppNotificationBanner />
+      <Tabs
+        screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: COLORS.primary,
         tabBarInactiveTintColor: COLORS.textMuted,
@@ -93,5 +97,6 @@ export default function TabsLayout() {
         }}
       />
     </Tabs>
+    </View>
   );
 }

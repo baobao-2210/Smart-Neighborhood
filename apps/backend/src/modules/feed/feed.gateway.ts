@@ -66,5 +66,10 @@ export class FeedGateway implements OnGatewayConnection {
     }
     this.server.to(`neighborhood:${neighborhoodId}`).emit(event, payload);
   }
+
+  emitToUser(userId: string, event: string, payload: unknown) {
+    if (!this.server) return;
+    this.server.to(`user:${userId}`).emit(event, payload);
+  }
 }
 
