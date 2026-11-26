@@ -163,10 +163,10 @@ export default function UnifiedCreateScreen() {
         category: activeTopic.kind === 'POST' ? activeTopic.category : PostCategory.WARNING,
         isOfficial: !isReportMode && canOfficer ? isOfficial : false,
         isPinned: !isReportMode && canLead ? isPinned : false,
-        locationName: location?.locationName,
-        latitude: location?.latitude,
-        longitude: location?.longitude,
-        mediaUrls,
+        locationName: location?.locationName?.trim() || undefined,
+        latitude: typeof location?.latitude === 'number' ? location.latitude : undefined,
+        longitude: typeof location?.longitude === 'number' ? location.longitude : undefined,
+        mediaUrls: mediaUrls.length > 0 ? mediaUrls : undefined,
         ...(isReportMode
           ? {
               incidentCategory: reportSubCat,
@@ -188,7 +188,13 @@ export default function UnifiedCreateScreen() {
           router.back();
         },
         onError: (err: any) => {
-          Alert.alert('Lỗi', err?.response?.data?.message || 'Không thể đăng bài viết');
+          const msg = err?.response?.data?.message || err?.message;
+          const displayMsg = Array.isArray(msg)
+            ? msg.join('\n')
+            : typeof msg === 'string'
+              ? msg
+              : 'Không thể đăng bài viết. Vui lòng kiểm tra kết nối mạng (cổng 3000).';
+          Alert.alert('Lỗi đăng bài', displayMsg);
         },
       },
     );

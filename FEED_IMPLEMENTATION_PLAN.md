@@ -36,3 +36,4 @@ Kế hoạch triển khai Module Bảng tin & Phản ánh sự cố theo đúng 
   - Phát `post.created`, `post.updated`, `post.deleted`, `post.liked`, `post.commented`, `incident.created`, `incident.accepted`, `incident.assigned`, `incident.status_changed`, `incident.resolved` có kiểm tra quyền phòng/người dùng (không rò rỉ phản ánh `PRIVATE`).
 - **P09 – Kiểm thử tích hợp:**
   - Chạy `tsc --noEmit`, lint, và bộ script kiểm thử E2E thật trên API + DB cho toàn bộ kịch bản PHẦN 8.
+

@@ -89,6 +89,8 @@ export function usePostDetail(id: string) {
 
 async function uploadLocalImages(uris: string[]): Promise<string[]> {
   const uploaded: string[] = [];
+  const token = useAuthStore.getState().accessToken;
+
   for (const uri of uris) {
     if (!uri.startsWith('file://') && !uri.startsWith('content://')) {
       uploaded.push(uri);
@@ -97,18 +99,38 @@ async function uploadLocalImages(uris: string[]): Promise<string[]> {
     try {
       const form = new FormData();
       const filename = uri.split('/').pop() || `photo-${Date.now()}.jpg`;
+      const match = /\.(\w+)$/.exec(filename);
+      const mimeType = match ? `image/${match[1].toLowerCase()}` : 'image/jpeg';
+
       form.append('file', {
         uri,
         name: filename,
-        type: 'image/jpeg',
+        type: mimeType === 'image/jpg' ? 'image/jpeg' : mimeType,
       } as any);
-      const res = await apiClient.post('/api/v1/upload', form, {
-        headers: { 'Content-Type': 'multipart/form-data' },
+
+      const res = await fetch(`${API_BASE_URL}/api/v1/upload`, {
+        method: 'POST',
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: form,
       });
-      if (res.data?.data?.url) {
-        uploaded.push(`${apiClient.defaults.baseURL}${res.data.data.url}`);
+
+      if (res.ok) {
+        const json = await res.json();
+        const uploadedUrl = json?.data?.url || json?.url;
+        if (uploadedUrl) {
+          const fullUrl = uploadedUrl.startsWith('http')
+            ? uploadedUrl
+            : `${API_BASE_URL}${uploadedUrl}`;
+          uploaded.push(fullUrl);
+          continue;
+        }
       }
-    } catch {
+      // If server upload failed, fallback to uri to avoid blocking post creation
+      uploaded.push(uri);
+    } catch (e) {
+      console.warn('Image upload error, continuing with local URI:', e);
       uploaded.push(uri);
     }
   }

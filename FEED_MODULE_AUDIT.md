@@ -45,3 +45,4 @@
   2. `create.tsx`: cần gọi 1 API hợp nhất (`POST /api/v1/posts`) khi đăng bài thường hoặc bài sự cố, có chọn quyền riêng tư (`PUBLIC` / `PRIVATE`) và mức độ khẩn thiết.
   3. `[id].tsx`: cần bổ sung **trả lời bình luận** (`parentId`), **chỉnh sửa bài viết**, **báo cáo bài viết**, và **hiển thị thẻ Phản ánh + Lịch sử xử lý (`ReportStatusHistory`) + nút Tiếp nhận / Phân công / Cập nhật trạng thái** cho cán bộ.
   4. Chưa kết nối Socket.IO client cho module Bảng tin để cập nhật realtime.
+
