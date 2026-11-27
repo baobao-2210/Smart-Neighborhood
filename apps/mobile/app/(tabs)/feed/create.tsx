@@ -27,7 +27,14 @@ import {
   LocationPickerModal,
   SelectedLocation,
 } from '@/components/LocationPickerModal';
-import { useCreatePost } from '@/services/feedService';
+import {
+  AiAssistResult,
+  cachePhotoBase64,
+  consumePendingInitialPhotos,
+  getCachedPhotoBase64,
+  useAiPostAssist,
+  useCreatePost,
+} from '@/services/feedService';
 import { isLeaderRole, isOfficerRole, useAuthStore } from '@/store/useAuthStore';
 import { getRoleLabel } from '@/utils/date';
 
@@ -68,6 +75,7 @@ export default function UnifiedCreateScreen() {
   const params = useLocalSearchParams<{
     mode?: string;
     openMap?: string;
+    fromQuickMedia?: string;
     initialPhotoUri?: string;
     initialPhotoUris?: string;
     openCamera?: string;
@@ -90,23 +98,110 @@ export default function UnifiedCreateScreen() {
   const [isOfficial, setIsOfficial] = useState(canOfficer);
   const [isPinned, setIsPinned] = useState(false);
 
+  // AI Trợ lý phản ánh sự cố & soạn bài
+  const [aiOpen, setAiOpen] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [aiResult, setAiResult] = useState<AiAssistResult | null>(null);
+
   const createPost = useCreatePost();
+  const aiAssist = useAiPostAssist();
+
+  const handleAskAi = (promptOverride?: string) => {
+    const q = (promptOverride ?? aiPrompt).trim();
+    if (q.length < 3) {
+      Alert.alert('Nhập mô tả ngắn', 'Hãy nhập câu hỏi hoặc mô tả ngắn (tối thiểu 3 ký tự) để AI hỗ trợ.');
+      return;
+    }
+    if (promptOverride) setAiPrompt(promptOverride);
+    aiAssist.mutate(
+      {
+        prompt: q,
+        isReportMode,
+        locationName: location?.locationName,
+        hasPhoto: mediaUrls.length > 0,
+      },
+      {
+        onSuccess: (res) => setAiResult(res),
+        onError: (err: any) => {
+          const raw = err?.response?.data?.message || err?.message;
+          const msg = Array.isArray(raw) ? raw.join('\n') : raw || 'Vui lòng thử lại sau.';
+          Alert.alert('Không thể kết nối AI', msg);
+        },
+      },
+    );
+  };
+
+  const handleScanImageWithAi = () => {
+    const targetUri = mediaUrls[0];
+    if (!targetUri) {
+      Alert.alert('Chưa có ảnh', 'Vui lòng chụp hoặc chọn ít nhất 1 ảnh để AI quét.');
+      return;
+    }
+    const base64 = getCachedPhotoBase64(targetUri);
+    setAiOpen(true);
+    aiAssist.mutate(
+      {
+        prompt: aiPrompt.trim() || undefined,
+        isReportMode,
+        locationName: location?.locationName,
+        hasPhoto: true,
+        imageBase64: base64,
+        mimeType: 'image/jpeg',
+      },
+      {
+        onSuccess: (res) => setAiResult(res),
+        onError: (err: any) => {
+          const raw = err?.response?.data?.message || err?.message;
+          const msg = Array.isArray(raw) ? raw.join('\n') : raw || 'Vui lòng thử lại sau.';
+          Alert.alert('Không thể quét ảnh', msg);
+        },
+      },
+    );
+  };
+
+  const handleApplyAiDraft = () => {
+    if (!aiResult) return;
+    setTitle(aiResult.suggestedTitle);
+    setContent(aiResult.suggestedContent.slice(0, 500));
+    if (isReportMode) {
+      if (aiResult.recommendedCategory) {
+        setReportSubCat(aiResult.recommendedCategory as ReportCategory);
+      }
+      if (aiResult.recommendedPriority) {
+        setPriority(aiResult.recommendedPriority as ReportPriority);
+      }
+    }
+    setAiOpen(false);
+  };
 
   useEffect(() => {
     if (params.mode === 'REPORT') setSelectedTopicIdx(1);
     if (params.openMap === '1') setMapPickerOpen(true);
+    if (params.fromQuickMedia === '1') {
+      const quickUris = consumePendingInitialPhotos();
+      if (quickUris.length > 0) {
+        setMediaUrls((prev) => Array.from(new Set([...quickUris, ...prev])).slice(0, 4));
+      }
+    }
     if (params.initialPhotoUri) {
-      setMediaUrls((prev) => (prev.includes(params.initialPhotoUri!) ? prev : [params.initialPhotoUri!, ...prev]));
+      const decoded = decodeURIComponent(params.initialPhotoUri);
+      setMediaUrls((prev) => (prev.includes(decoded) ? prev : [decoded, ...prev].slice(0, 4)));
     }
     if (params.initialPhotoUris) {
       try {
-        const parsed = JSON.parse(params.initialPhotoUris);
+        const parsed = JSON.parse(decodeURIComponent(params.initialPhotoUris));
         if (Array.isArray(parsed)) {
-          setMediaUrls((prev) => Array.from(new Set([...prev, ...parsed])));
+          setMediaUrls((prev) => Array.from(new Set([...prev, ...parsed])).slice(0, 4));
         }
       } catch {}
     }
-  }, [params.mode, params.openMap, params.initialPhotoUri, params.initialPhotoUris]);
+  }, [
+    params.mode,
+    params.openMap,
+    params.fromQuickMedia,
+    params.initialPhotoUri,
+    params.initialPhotoUris,
+  ]);
 
   const activeTopic = TOPICS[selectedTopicIdx];
   const isReportMode = activeTopic.kind === 'REPORT';
@@ -138,9 +233,11 @@ export default function UnifiedCreateScreen() {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsMultipleSelection: true,
-      quality: 0.8,
+      quality: 0.55,
+      base64: true,
     });
     if (!result.canceled) {
+      result.assets.forEach((a) => cachePhotoBase64(a.uri, a.base64));
       const uris = result.assets.map((a) => a.uri);
       setMediaUrls((prev) => [...prev, ...uris].slice(0, 4));
     }
@@ -154,9 +251,11 @@ export default function UnifiedCreateScreen() {
     }
     const result = await ImagePicker.launchCameraAsync({
       mediaTypes: ['images'],
-      quality: 0.8,
+      quality: 0.55,
+      base64: true,
     });
     if (!result.canceled && result.assets[0]) {
+      cachePhotoBase64(result.assets[0].uri, result.assets[0].base64);
       setMediaUrls((prev) => [...prev, result.assets[0].uri].slice(0, 4));
     }
   };
@@ -326,6 +425,135 @@ export default function UnifiedCreateScreen() {
         </AppCard>
       )}
 
+      {/* AI Trợ lý phản ánh sự cố & viết bài */}
+      <AppCard style={styles.aiCard}>
+        <TouchableOpacity
+          activeOpacity={0.85}
+          onPress={() => setAiOpen((v) => !v)}
+          style={styles.aiHeaderRow}
+        >
+          <View style={styles.aiTitleLeft}>
+            <View style={styles.aiIconBox}>
+              <Ionicons name="sparkles" size={16} color={COLORS.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <AppText variant="label" color={COLORS.primary}>
+                Trợ lý AI hướng dẫn & viết bài
+              </AppText>
+              <AppText variant="caption" color={COLORS.textSecondary} numberOfLines={1}>
+                Hỏi cách phản ánh, gợi ý thông tin cần bổ sung & viết hộ
+              </AppText>
+            </View>
+          </View>
+          <Ionicons
+            name={aiOpen ? 'chevron-up' : 'chevron-down'}
+            size={18}
+            color={COLORS.primary}
+          />
+        </TouchableOpacity>
+
+        {aiOpen && (
+          <View style={styles.aiBody}>
+            <AppText variant="caption" color={COLORS.textMuted} semibold>
+              Chọn nhanh tình huống gợi ý:
+            </AppText>
+            <View style={styles.aiExampleMenu}>
+              {[
+                'Đường trước nhà tôi có ổ gà, tôi nên phản ánh thế nào?',
+                'Đèn đường ngõ bị tắt tối nhiều ngày',
+                'Rác thải tồn đọng bốc mùi',
+                'An ninh trật tự / người lạ khả nghi',
+              ].map((ex) => (
+                <TouchableOpacity
+                  key={ex}
+                  activeOpacity={0.8}
+                  onPress={() => handleAskAi(ex)}
+                  style={styles.aiExampleMenuItem}
+                >
+                  <Ionicons name="chatbubble-ellipses-outline" size={15} color={COLORS.primary} />
+                  <AppText variant="caption" color={COLORS.textPrimary} style={{ flex: 1 }}>
+                    {ex}
+                  </AppText>
+                  <Ionicons name="chevron-forward" size={14} color={COLORS.textMuted} />
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <View style={styles.aiInputRow}>
+              <TextInput
+                style={styles.aiInput}
+                placeholder="VD: Đường trước nhà có ổ gà, viết sao cho rõ?"
+                placeholderTextColor={COLORS.textMuted}
+                value={aiPrompt}
+                onChangeText={setAiPrompt}
+              />
+              <TouchableOpacity
+                onPress={() => handleAskAi()}
+                disabled={aiAssist.isPending}
+                style={styles.aiSendBtn}
+              >
+                {aiAssist.isPending ? (
+                  <ActivityIndicator size="small" color={COLORS.textInverse} />
+                ) : (
+                  <Ionicons name="sparkles" size={16} color={COLORS.textInverse} />
+                )}
+              </TouchableOpacity>
+            </View>
+
+            {aiResult && (
+              <View style={styles.aiResultBox}>
+                {aiResult.detectedIssues && aiResult.detectedIssues.length > 0 && (
+                  <>
+                    <AppText variant="caption" color={COLORS.primary} semibold>
+                      🔍 Vấn đề AI phát hiện trong ảnh:
+                    </AppText>
+                    {aiResult.detectedIssues.map((issue, idx) => (
+                      <AppText key={`issue-${idx}`} variant="caption" color={COLORS.textPrimary}>
+                        • {issue}
+                      </AppText>
+                    ))}
+                  </>
+                )}
+
+                <AppText variant="caption" color={COLORS.warning} semibold style={{ marginTop: 4 }}>
+                  💡 Hướng dẫn mô tả rõ ràng:
+                </AppText>
+                <AppText variant="caption" color={COLORS.textSecondary}>
+                  {aiResult.guidanceText}
+                </AppText>
+
+                <AppText variant="caption" color={COLORS.secondary} semibold style={{ marginTop: 6 }}>
+                  📋 Thông tin nên bổ sung:
+                </AppText>
+                {aiResult.missingInfoChecklist.map((item, idx) => (
+                  <AppText key={idx} variant="caption" color={COLORS.textSecondary}>
+                    • {item}
+                  </AppText>
+                ))}
+
+                <View style={styles.aiDraftPreview}>
+                  <AppText variant="caption" color={COLORS.primary} semibold>
+                    Bản nháp gợi ý:
+                  </AppText>
+                  <AppText variant="body" semibold style={{ fontSize: 13.5 }}>
+                    {aiResult.suggestedTitle}
+                  </AppText>
+                  <AppText variant="caption" color={COLORS.textPrimary} style={{ lineHeight: 18 }}>
+                    {aiResult.suggestedContent}
+                  </AppText>
+                </View>
+
+                <AppButton
+                  title="Áp dụng vào bài viết"
+                  onPress={handleApplyAiDraft}
+                  fullWidth
+                />
+              </View>
+            )}
+          </View>
+        )}
+      </AppCard>
+
       {/* Text Composer */}
       <AppCard style={styles.inputCard}>
         <TextInput
@@ -390,19 +618,39 @@ export default function UnifiedCreateScreen() {
         </View>
 
         {mediaUrls.length > 0 && (
-          <View style={styles.thumbGrid}>
-            {mediaUrls.map((uri, idx) => (
-              <View key={`${uri}-${idx}`} style={styles.thumbWrap}>
-                <Image source={{ uri }} style={styles.thumb} />
-                <TouchableOpacity
-                  onPress={() => setMediaUrls((prev) => prev.filter((_, i) => i !== idx))}
-                  style={styles.removeBtn}
-                >
-                  <Ionicons name="close-circle" size={22} color="#FFFFFF" />
-                </TouchableOpacity>
-              </View>
-            ))}
-          </View>
+          <>
+            <View style={styles.thumbGrid}>
+              {mediaUrls.map((uri, idx) => (
+                <View key={`${uri}-${idx}`} style={styles.thumbWrap}>
+                  <Image source={{ uri }} style={styles.thumb} />
+                  <TouchableOpacity
+                    onPress={() => setMediaUrls((prev) => prev.filter((_, i) => i !== idx))}
+                    style={styles.removeBtn}
+                  >
+                    <Ionicons name="close-circle" size={22} color="#FFFFFF" />
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={handleScanImageWithAi}
+              disabled={aiAssist.isPending}
+              style={styles.scanAiBtn}
+            >
+              {aiAssist.isPending ? (
+                <ActivityIndicator size="small" color={COLORS.primary} />
+              ) : (
+                <Ionicons name="scan-outline" size={18} color={COLORS.primary} />
+              )}
+              <AppText variant="caption" semibold color={COLORS.primary} style={{ marginLeft: 8 }}>
+                {aiAssist.isPending
+                  ? 'AI đang quét hình ảnh tìm vấn đề...'
+                  : '✨ AI quét ảnh vừa chụp để gợi ý các vấn đề cần ghi'}
+              </AppText>
+            </TouchableOpacity>
+          </>
         )}
       </View>
 
@@ -657,4 +905,102 @@ const styles = StyleSheet.create({
   },
   optionsCard: { gap: SPACING.xs },
   switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: SPACING.md },
+  aiCard: {
+    padding: SPACING.md,
+    borderColor: COLORS.primarySoft,
+    backgroundColor: '#29211C',
+    gap: SPACING.sm,
+  },
+  aiHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: SPACING.sm,
+  },
+  aiTitleLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    flex: 1,
+  },
+  aiIconBox: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: COLORS.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  aiBody: {
+    gap: SPACING.sm,
+    marginTop: 4,
+  },
+  aiExampleMenu: {
+    gap: 6,
+  },
+  aiExampleMenuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: 9,
+    borderRadius: RADIUS.md,
+    backgroundColor: COLORS.surfaceAlt,
+    borderWidth: 1,
+    borderColor: COLORS.primarySoft,
+  },
+  aiInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  aiInput: {
+    flex: 1,
+    backgroundColor: COLORS.surfaceAlt,
+    color: COLORS.textPrimary,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: 9,
+    fontSize: 13.5,
+  },
+  aiSendBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: RADIUS.md,
+    backgroundColor: COLORS.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  aiResultBox: {
+    backgroundColor: COLORS.surfaceAlt,
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    gap: 4,
+  },
+  aiDraftPreview: {
+    marginTop: 6,
+    marginBottom: 8,
+    padding: SPACING.sm,
+    borderRadius: RADIUS.md,
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.primarySoft,
+    gap: 3,
+  },
+  scanAiBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 11,
+    paddingHorizontal: SPACING.md,
+    borderRadius: RADIUS.lg,
+    backgroundColor: COLORS.primaryLight,
+    borderWidth: 1,
+    borderColor: COLORS.primarySoft,
+    marginTop: 4,
+  },
 });

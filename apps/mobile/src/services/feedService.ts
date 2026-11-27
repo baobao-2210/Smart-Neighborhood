@@ -241,6 +241,60 @@ export function useStartDirectChat() {
   });
 }
 
+// Temporary in-memory cache so quick-camera photos from Feed pass exact file:// URI & base64 cleanly without URL encoding issues
+const photoBase64Cache = new Map<string, string>();
+let pendingInitialPhotos: Array<{ uri: string; base64?: string | null }> = [];
+
+export function cachePhotoBase64(uri: string, base64?: string | null) {
+  if (uri && base64) {
+    photoBase64Cache.set(uri, base64);
+  }
+}
+
+export function getCachedPhotoBase64(uri: string): string | undefined {
+  return photoBase64Cache.get(uri);
+}
+
+export function setPendingInitialPhotos(items: Array<{ uri: string; base64?: string | null }>) {
+  pendingInitialPhotos = items;
+  items.forEach((it) => cachePhotoBase64(it.uri, it.base64));
+}
+
+export function consumePendingInitialPhotos(): string[] {
+  if (pendingInitialPhotos.length === 0) return [];
+  const uris = pendingInitialPhotos.map((it) => it.uri);
+  pendingInitialPhotos = [];
+  return uris;
+}
+
+export interface AiAssistResult {
+  detectedIssues?: string[];
+  suggestedTitle: string;
+  suggestedContent: string;
+  guidanceText: string;
+  missingInfoChecklist: string[];
+  recommendedCategory: string;
+  recommendedPriority: string;
+}
+
+export function useAiPostAssist() {
+  return useMutation({
+    mutationFn: async (payload: {
+      prompt?: string;
+      isReportMode?: boolean;
+      locationName?: string;
+      hasPhoto?: boolean;
+      imageBase64?: string;
+      mimeType?: string;
+    }) => {
+      const res = await apiClient.post('/api/v1/posts/ai-assist', payload, {
+        timeout: 30000,
+      });
+      return res.data.data as AiAssistResult;
+    },
+  });
+}
+
 export function useTogglePinPost() {
   const queryClient = useQueryClient();
   return useMutation({

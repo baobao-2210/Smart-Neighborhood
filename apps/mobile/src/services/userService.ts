@@ -52,6 +52,8 @@ export function useMyHousehold() {
       return res.data.data;
     },
     enabled: isAuthenticated,
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 }
 

@@ -8,6 +8,8 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  Modal,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -29,6 +31,8 @@ export default function LoginScreen() {
 
   const [phoneNumber, setPhoneNumber] = useState('0912345678');
   const [password, setPassword] = useState('123456');
+  const [showPassword, setShowPassword] = useState(false);
+  const [forgotOpen, setForgotOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
@@ -43,9 +47,12 @@ export default function LoginScreen() {
       await setSession(data.user, data.accessToken, data.refreshToken);
       router.replace('/(tabs)/feed');
     } catch (err: any) {
-      const msg =
-        err?.response?.data?.message ||
-        'Không thể kết nối tới máy chủ Backend (kiểm tra cổng 3000).';
+      const raw = err?.response?.data?.message || err?.message;
+      const msg = Array.isArray(raw)
+        ? raw.join('\n')
+        : typeof raw === 'string'
+          ? raw
+          : 'Không thể kết nối tới máy chủ Backend (kiểm tra cổng 3000).';
       Alert.alert('Đăng nhập thất bại', msg);
     } finally {
       setLoading(false);
@@ -88,17 +95,38 @@ export default function LoginScreen() {
               onChangeText={setPhoneNumber}
             />
 
-            <AppText variant="label" color={COLORS.textSecondary} style={styles.label}>
-              Mật khẩu
-            </AppText>
-            <TextInput
-              style={styles.input}
-              placeholder="Nhập mật khẩu..."
-              placeholderTextColor={COLORS.textMuted}
-              secureTextEntry
-              value={password}
-              onChangeText={setPassword}
-            />
+            <View style={styles.pwdHeaderRow}>
+              <AppText variant="label" color={COLORS.textSecondary}>
+                Mật khẩu
+              </AppText>
+              <TouchableOpacity onPress={() => setForgotOpen(true)}>
+                <AppText variant="caption" semibold color={COLORS.primary}>
+                  Quên mật khẩu?
+                </AppText>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.passwordWrap}>
+              <TextInput
+                style={styles.passwordInput}
+                placeholder="Nhập mật khẩu..."
+                placeholderTextColor={COLORS.textMuted}
+                secureTextEntry={!showPassword}
+                value={password}
+                onChangeText={setPassword}
+              />
+              <TouchableOpacity
+                onPress={() => setShowPassword((v) => !v)}
+                style={styles.eyeBtn}
+                hitSlop={8}
+              >
+                <Ionicons
+                  name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                  size={20}
+                  color={COLORS.textMuted}
+                />
+              </TouchableOpacity>
+            </View>
 
             <AppButton
               title="Đăng nhập"
@@ -120,7 +148,7 @@ export default function LoginScreen() {
 
           <AppCard style={styles.demoCard}>
             <AppText variant="label" color={COLORS.textSecondary} style={styles.demoTitle}>
-              Điền nhanh tài khoản đã seed trên Supabase:
+              Điền nhanh tài khoản trải nghiệm:
             </AppText>
             <View style={styles.demoRow}>
               {DEMO_ACCOUNTS.map((acc) => (
@@ -141,6 +169,36 @@ export default function LoginScreen() {
           </AppCard>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Forgot Password Support Modal */}
+      <Modal visible={forgotOpen} animationType="fade" transparent>
+        <View style={styles.modalBackdrop}>
+          <AppCard style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <AppText variant="h3">Khôi phục mật khẩu</AppText>
+              <TouchableOpacity onPress={() => setForgotOpen(false)}>
+                <Ionicons name="close" size={22} color={COLORS.textMuted} />
+              </TouchableOpacity>
+            </View>
+            <AppText variant="body" color={COLORS.textSecondary}>
+              Để đảm bảo an toàn thông tin cư dân, vui lòng liên hệ trực tiếp Tổ trưởng hoặc Ban điều hành Tổ dân phố để xác minh SĐT và cấp lại mật khẩu mới.
+            </AppText>
+            <View style={{ flexDirection: 'row', gap: SPACING.sm, marginTop: SPACING.xs }}>
+              <AppButton
+                title="Đóng"
+                variant="outline"
+                onPress={() => setForgotOpen(false)}
+                style={{ flex: 1 }}
+              />
+              <AppButton
+                title="Gọi Tổ trưởng"
+                onPress={() => Linking.openURL('tel:0987654321')}
+                style={{ flex: 1 }}
+              />
+            </View>
+          </AppCard>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -162,6 +220,12 @@ const styles = StyleSheet.create({
   card: { marginBottom: SPACING.md },
   cardTitle: { marginBottom: SPACING.md },
   label: { marginBottom: 6 },
+  pwdHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
   input: {
     backgroundColor: COLORS.surfaceAlt,
     borderRadius: RADIUS.md,
@@ -172,6 +236,25 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.md,
     borderWidth: 1,
     borderColor: COLORS.border,
+  },
+  passwordWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.surfaceAlt,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    marginBottom: SPACING.md,
+  },
+  passwordInput: {
+    flex: 1,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.md,
+    fontSize: 15,
+    color: COLORS.textPrimary,
+  },
+  eyeBtn: {
+    paddingHorizontal: SPACING.md,
   },
   loginBtn: { marginTop: SPACING.xs },
   registerLink: { alignItems: 'center', marginTop: SPACING.md },
@@ -186,5 +269,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.primaryLight,
   },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.65)',
+    justifyContent: 'center',
+    padding: SPACING.lg,
+  },
+  modalCard: { gap: SPACING.md },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
 });
-

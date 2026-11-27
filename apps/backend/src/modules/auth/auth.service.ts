@@ -157,6 +157,14 @@ export class AuthService {
     return { updated: true };
   }
 
+  async getActiveNeighborhoods() {
+    return this.prisma.neighborhood.findMany({
+      where: { isActive: true },
+      select: { id: true, code: true, name: true },
+      orderBy: { name: 'asc' },
+    });
+  }
+
   private async issueTokens(userId: string, neighborhoodId: string, role: string) {
     const payload = { sub: userId, neighborhoodId, role };
 

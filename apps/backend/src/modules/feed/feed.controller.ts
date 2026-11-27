@@ -12,9 +12,11 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import {
   AuthenticatedUser,
   CurrentUser,
+  Public,
 } from '../../common/decorators/auth.decorators';
 import { FeedService, RequestUserContext } from './feed.service';
 import {
+  AiAssistDto,
   CreateCommentDto,
   CreatePostDto,
   FeedQueryDto,
@@ -51,6 +53,12 @@ export class FeedController {
     @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.feedService.getPostById(id, this.toContext(user));
+  }
+
+  @Public()
+  @Post('ai-assist')
+  aiAssist(@Body() dto: AiAssistDto) {
+    return this.feedService.aiAssist(dto);
   }
 
   @Post()

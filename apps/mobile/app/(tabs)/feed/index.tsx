@@ -19,6 +19,7 @@ import { COLORS, RADIUS, SPACING } from '@/constants/theme';
 import { AppCard, AppText, Avatar, Badge, EmptyState } from '@/components';
 import { FeedPostCard } from '@/components/FeedPostCard';
 import {
+  setPendingInitialPhotos,
   useDeletePost,
   useFeedPosts,
   useFeedRealtime,
@@ -189,14 +190,15 @@ export default function FeedScreen() {
       }
       const result = await ImagePicker.launchCameraAsync({
         mediaTypes: ['images'],
-        quality: 0.8,
+        quality: 0.55,
+        base64: true,
       });
       if (!result.canceled && result.assets[0]?.uri) {
+        setPendingInitialPhotos([
+          { uri: result.assets[0].uri, base64: result.assets[0].base64 },
+        ]);
         // Chuyển ngay sang màn hình đăng bài kèm ảnh vừa chụp
-        router.push({
-          pathname: '/(tabs)/feed/create',
-          params: { initialPhotoUri: result.assets[0].uri },
-        });
+        router.push('/(tabs)/feed/create?fromQuickMedia=1' as any);
       }
     } catch {
       Alert.alert('Không thể mở Camera', 'Vui lòng thử lại sau.');
@@ -208,14 +210,14 @@ export default function FeedScreen() {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
         allowsMultipleSelection: true,
-        quality: 0.8,
+        quality: 0.55,
+        base64: true,
       });
       if (!result.canceled && result.assets.length > 0) {
-        const uris = JSON.stringify(result.assets.map((a) => a.uri));
-        router.push({
-          pathname: '/(tabs)/feed/create',
-          params: { initialPhotoUris: uris },
-        });
+        setPendingInitialPhotos(
+          result.assets.map((a) => ({ uri: a.uri, base64: a.base64 })),
+        );
+        router.push('/(tabs)/feed/create?fromQuickMedia=1' as any);
       }
     } catch {
       router.push('/(tabs)/feed/create');
@@ -224,33 +226,6 @@ export default function FeedScreen() {
 
   const renderFacebookHeader = () => (
     <View style={styles.homeHeaderContainer}>
-      {/* Phát thanh nội bộ */}
-      <AppCard style={styles.broadcastCard}>
-        <View style={styles.broadcastIconCircle}>
-          <Ionicons name="volume-high" size={18} color={COLORS.warning} />
-        </View>
-        <View style={{ flex: 1 }}>
-          <View style={styles.broadcastLabelRow}>
-            <AppText variant="label" color={COLORS.warning}>
-              PHÁT THANH NỘI BỘ
-            </AppText>
-            <View style={styles.liveDot} />
-          </View>
-          <AppText variant="caption" color={COLORS.textSecondary} numberOfLines={1}>
-            Lịch thu gom rác tái chế: Thứ 3 - Thứ 5 - Thứ 7 (19:30)
-          </AppText>
-        </View>
-        <TouchableOpacity
-          onPress={() => router.push('/(tabs)/notice' as any)}
-          style={styles.listenPill}
-        >
-          <AppText variant="label" color={COLORS.primary}>
-            Nghe
-          </AppText>
-          <Ionicons name="play" size={11} color={COLORS.primary} style={{ marginLeft: 4 }} />
-        </TouchableOpacity>
-      </AppCard>
-
       {/* Facebook-style Unified Composer Box */}
       <AppCard style={styles.composerCard}>
         {/* Hàng trên: Avatar + Ô nhập bài viết + NÚT CAMERA CHỤP TRỰC TIẾP SÁT BÊN */}

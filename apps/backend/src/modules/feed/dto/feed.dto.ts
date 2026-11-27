@@ -146,3 +146,30 @@ export class ReportPostDto {
   @MaxLength(500)
   reason!: string;
 }
+
+export class AiAssistDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  prompt?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  isReportMode?: boolean;
+
+  @IsOptional()
+  @IsString()
+  locationName?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  hasPhoto?: boolean;
+
+  @IsOptional()
+  @IsString()
+  imageBase64?: string;
+
+  @IsOptional()
+  @IsString()
+  mimeType?: string;
+}

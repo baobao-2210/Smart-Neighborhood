@@ -1,14 +1,23 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View } from 'react-native';
-import { Tabs } from 'expo-router';
+import { Tabs, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '@/constants/theme';
 import { InAppNotificationBanner } from '@/components/InAppNotificationBanner';
 import { useMyNotifications } from '@/services/noticeService';
+import { useAuthStore } from '@/store/useAuthStore';
 
 export default function TabsLayout() {
+  const router = useRouter();
+  const { isAuthenticated, isHydrated } = useAuthStore();
   const { data: notifData } = useMyNotifications();
   const unreadCount = notifData?.unreadCount ?? 0;
+
+  useEffect(() => {
+    if (isHydrated && !isAuthenticated) {
+      router.replace('/(auth)/login');
+    }
+  }, [isHydrated, isAuthenticated, router]);
 
   return (
     <View style={{ flex: 1 }}>
@@ -47,6 +56,15 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="connect"
+        options={{
+          title: 'Trò chuyện',
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons name={focused ? 'chatbubbles' : 'chatbubbles-outline'} size={21} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="notice/index"
         options={{
           title: 'Thông báo',
@@ -59,15 +77,6 @@ export default function TabsLayout() {
           },
           tabBarIcon: ({ color, size, focused }) => (
             <Ionicons name={focused ? 'notifications' : 'notifications-outline'} size={21} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="connect"
-        options={{
-          title: 'Kết nối',
-          tabBarIcon: ({ color, size, focused }) => (
-            <Ionicons name={focused ? 'chatbubbles' : 'chatbubbles-outline'} size={21} color={color} />
           ),
         }}
       />

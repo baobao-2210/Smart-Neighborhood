@@ -122,6 +122,280 @@ async function main() {
     });
   }
 
+  // 3b. Bổ sung thêm cư dân & hộ gia đình đầy đủ cho Tổ dân phố
+  const extraUsersData = [
+    {
+      id: 'user-resident-02',
+      phoneNumber: '0901112233',
+      fullName: 'Lê Thuỳ Dung',
+      email: 'thuydung@todanpho.vn',
+      role: 'RESIDENT' as const,
+    },
+    {
+      id: 'user-resident-03',
+      phoneNumber: '0902223344',
+      fullName: 'Phạm Hoàng Nam',
+      email: 'hoangnam@todanpho.vn',
+      role: 'RESIDENT' as const,
+    },
+    {
+      id: 'user-resident-04',
+      phoneNumber: '0903334455',
+      fullName: 'Mai Thị Phương',
+      email: 'maiphuong@todanpho.vn',
+      role: 'RESIDENT' as const,
+      staffTitle: 'Chi hội Phụ nữ',
+    },
+    {
+      id: 'user-resident-05',
+      phoneNumber: '0904445566',
+      fullName: 'Hoàng Quốc Bảo',
+      email: 'quocbao@todanpho.vn',
+      role: 'RESIDENT' as const,
+    },
+  ];
+
+  const extraUsers: Record<string, any> = {};
+  for (const u of extraUsersData) {
+    extraUsers[u.id] = await prisma.user.upsert({
+      where: { phoneNumber: u.phoneNumber },
+      update: {},
+      create: {
+        id: u.id,
+        neighborhoodId: neighborhood.id,
+        phoneNumber: u.phoneNumber,
+        passwordHash: defaultPasswordHash,
+        fullName: u.fullName,
+        email: u.email,
+        role: u.role,
+        staffTitle: u.staffTitle,
+        setting: { create: {} },
+      },
+    });
+  }
+
+  const ensureMember = async (
+    householdId: string,
+    data: {
+      userId?: string;
+      fullName: string;
+      cccdNumber?: string;
+      dateOfBirth: string;
+      gender: 'MALE' | 'FEMALE' | 'OTHER';
+      isHead: boolean;
+      relationToHead:
+        | 'CHU_HO'
+        | 'VO_CHONG'
+        | 'CON'
+        | 'BO_ME'
+        | 'ONG_BA'
+        | 'CHAU'
+        | 'ANH_CHI_EM'
+        | 'NGUOI_THUE'
+        | 'KHAC';
+      residenceType: 'THUONG_TRU' | 'TAM_TRU' | 'TAM_VANG' | 'LUU_TRU';
+      residenceStatus: 'DANG_CU_TRU' | 'TAM_VANG' | 'DA_CHUYEN_DI';
+    },
+  ) => {
+    const exists = await prisma.householdMember.findFirst({
+      where: { householdId, fullName: data.fullName },
+    });
+    if (!exists) {
+      await prisma.householdMember.create({
+        data: {
+          householdId,
+          userId: data.userId ?? null,
+          fullName: data.fullName,
+          cccdNumber: data.cccdNumber ?? null,
+          dateOfBirth: new Date(data.dateOfBirth),
+          gender: data.gender,
+          isHead: data.isHead,
+          relationToHead: data.relationToHead,
+          residenceType: data.residenceType,
+          residenceStatus: data.residenceStatus,
+        },
+      });
+    }
+  };
+
+  // Bổ sung thành viên cho HK-2026-0001 (Hộ Nguyễn Văn An)
+  await ensureMember(household1.id, {
+    fullName: 'Nguyễn Thị Lan',
+    cccdNumber: '079192004321',
+    dateOfBirth: '1992-08-20',
+    gender: 'FEMALE',
+    isHead: false,
+    relationToHead: 'VO_CHONG',
+    residenceType: 'THUONG_TRU',
+    residenceStatus: 'DANG_CU_TRU',
+  });
+  await ensureMember(household1.id, {
+    fullName: 'Nguyễn Minh Khang',
+    dateOfBirth: '2018-11-05',
+    gender: 'MALE',
+    isHead: false,
+    relationToHead: 'CON',
+    residenceType: 'THUONG_TRU',
+    residenceStatus: 'DANG_CU_TRU',
+  });
+
+  // Các hộ gia đình bổ sung (HK-2026-0002 -> HK-2026-0005)
+  const householdsSpec = [
+    {
+      code: 'HK-2026-0002',
+      houseNumber: '12',
+      street: 'Ngõ 12, Đường Nơ Trang Long',
+      latitude: 10.8131,
+      longitude: 106.6989,
+      members: [
+        {
+          userId: leader.id,
+          fullName: leader.fullName,
+          cccdNumber: '079175008899',
+          dateOfBirth: '1975-03-10',
+          gender: 'FEMALE' as const,
+          isHead: true,
+          relationToHead: 'CHU_HO' as const,
+          residenceType: 'THUONG_TRU' as const,
+          residenceStatus: 'DANG_CU_TRU' as const,
+        },
+        {
+          fullName: 'Đỗ Văn Hùng',
+          cccdNumber: '079073007711',
+          dateOfBirth: '1973-09-12',
+          gender: 'MALE' as const,
+          isHead: false,
+          relationToHead: 'VO_CHONG' as const,
+          residenceType: 'THUONG_TRU' as const,
+          residenceStatus: 'DANG_CU_TRU' as const,
+        },
+      ],
+    },
+    {
+      code: 'HK-2026-0003',
+      houseNumber: '18',
+      street: 'Ngõ 12, Đường Nơ Trang Long',
+      latitude: 10.8127,
+      longitude: 106.6984,
+      members: [
+        {
+          userId: extraUsers['user-resident-02'].id,
+          fullName: 'Lê Thuỳ Dung',
+          cccdNumber: '079188003344',
+          dateOfBirth: '1988-07-22',
+          gender: 'FEMALE' as const,
+          isHead: true,
+          relationToHead: 'CHU_HO' as const,
+          residenceType: 'THUONG_TRU' as const,
+          residenceStatus: 'DANG_CU_TRU' as const,
+        },
+        {
+          fullName: 'Lê Văn Tuấn',
+          cccdNumber: '079060002211',
+          dateOfBirth: '1960-02-14',
+          gender: 'MALE' as const,
+          isHead: false,
+          relationToHead: 'BO_ME' as const,
+          residenceType: 'THUONG_TRU' as const,
+          residenceStatus: 'DANG_CU_TRU' as const,
+        },
+        {
+          fullName: 'Lê Minh Anh',
+          dateOfBirth: '2015-06-01',
+          gender: 'FEMALE' as const,
+          isHead: false,
+          relationToHead: 'CON' as const,
+          residenceType: 'THUONG_TRU' as const,
+          residenceStatus: 'DANG_CU_TRU' as const,
+        },
+      ],
+    },
+    {
+      code: 'HK-2026-0004',
+      houseNumber: '30',
+      street: 'Hẻm 14, Khu dân cư Tổ 5',
+      latitude: 10.8121,
+      longitude: 106.6979,
+      members: [
+        {
+          userId: extraUsers['user-resident-03'].id,
+          fullName: 'Phạm Hoàng Nam',
+          cccdNumber: '079094005566',
+          dateOfBirth: '1994-12-03',
+          gender: 'MALE' as const,
+          isHead: true,
+          relationToHead: 'CHU_HO' as const,
+          residenceType: 'TAM_TRU' as const,
+          residenceStatus: 'DANG_CU_TRU' as const,
+        },
+        {
+          fullName: 'Trần Ngọc Mai',
+          cccdNumber: '079196006677',
+          dateOfBirth: '1996-04-18',
+          gender: 'FEMALE' as const,
+          isHead: false,
+          relationToHead: 'VO_CHONG' as const,
+          residenceType: 'TAM_TRU' as const,
+          residenceStatus: 'DANG_CU_TRU' as const,
+        },
+      ],
+    },
+    {
+      code: 'HK-2026-0005',
+      houseNumber: '06',
+      street: 'Ngõ 12, Đường Nơ Trang Long',
+      latitude: 10.8135,
+          longitude: 106.6993,
+      members: [
+        {
+          userId: extraUsers['user-resident-04'].id,
+          fullName: 'Mai Thị Phương',
+          cccdNumber: '079180009900',
+          dateOfBirth: '1980-10-08',
+          gender: 'FEMALE' as const,
+          isHead: true,
+          relationToHead: 'CHU_HO' as const,
+          residenceType: 'THUONG_TRU' as const,
+          residenceStatus: 'DANG_CU_TRU' as const,
+        },
+        {
+          userId: extraUsers['user-resident-05'].id,
+          fullName: 'Hoàng Quốc Bảo',
+          cccdNumber: '079098001122',
+          dateOfBirth: '1998-01-25',
+          gender: 'MALE' as const,
+          isHead: false,
+          relationToHead: 'NGUOI_THUE' as const,
+          residenceType: 'TAM_TRU' as const,
+          residenceStatus: 'DANG_CU_TRU' as const,
+        },
+      ],
+    },
+  ];
+
+  for (const spec of householdsSpec) {
+    const hh = await prisma.household.upsert({
+      where: {
+        neighborhoodId_code: {
+          neighborhoodId: neighborhood.id,
+          code: spec.code,
+        },
+      },
+      update: {},
+      create: {
+        neighborhoodId: neighborhood.id,
+        code: spec.code,
+        houseNumber: spec.houseNumber,
+        street: spec.street,
+        latitude: spec.latitude,
+        longitude: spec.longitude,
+      },
+    });
+    for (const mem of spec.members) {
+      await ensureMember(hh.id, mem);
+    }
+  }
+
   // 4. Tạo Bài viết Bảng tin (Module 1)
   const postCount = await prisma.post.count({
     where: { neighborhoodId: neighborhood.id },
