@@ -1,7 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
-  ArrayMinSize,
   IsArray,
   IsBoolean,
   IsEnum,
@@ -26,11 +25,11 @@ export class CreateConversationDto {
   @MaxLength(100)
   name?: string;
 
-  @ApiProperty({ type: [String] })
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
   @IsArray()
-  @ArrayMinSize(1)
   @IsString({ each: true })
-  participantIds!: string[];
+  participantIds?: string[];
 }
 
 export class MessageQueryDto {

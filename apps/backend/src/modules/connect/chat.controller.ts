@@ -14,6 +14,7 @@ import {
   CurrentUser,
   Roles,
 } from '../../common/decorators/auth.decorators';
+import { ChatGateway } from './chat.gateway';
 import { ChatService } from './chat.service';
 import {
   CreateConversationDto,
@@ -27,7 +28,18 @@ import {
 @ApiBearerAuth()
 @Controller('api/v1')
 export class ChatController {
-  constructor(private readonly chatService: ChatService) {}
+  constructor(
+    private readonly chatService: ChatService,
+    private readonly chatGateway: ChatGateway,
+  ) {}
+
+  @Get('contacts')
+  getContacts(
+    @Query('search') search: string | undefined,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.chatService.getNeighborhoodContacts(user, search);
+  }
 
   @Get('conversations')
   getMyConversations(@CurrentUser() user: AuthenticatedUser) {
@@ -52,12 +64,16 @@ export class ChatController {
   }
 
   @Post('conversations/:id/messages')
-  sendMessage(
+  async sendMessage(
     @Param('id') conversationId: string,
     @Body() dto: SendMessageDto,
     @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.chatService.sendMessage(conversationId, dto, user);
+    const msg = await this.chatService.sendMessage(conversationId, dto, user);
+    this.chatGateway.server
+      ?.to(`conversation:${conversationId}`)
+      .emit('server:new_message', msg);
+    return msg;
   }
 
   @Post('messages/:id/report')

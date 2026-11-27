@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -23,6 +24,38 @@ export class ChatService {
     private readonly auditService: AuditService,
     private readonly feedGateway: FeedGateway,
   ) {}
+
+  async getNeighborhoodContacts(user: AuthenticatedUser, search?: string) {
+    const where: Record<string, any> = {
+      neighborhoodId: user.neighborhoodId,
+      deletedAt: null,
+      status: 'ACTIVE',
+      id: { not: user.id },
+    };
+
+    if (search?.trim()) {
+      const q = search.trim();
+      where.OR = [
+        { fullName: { contains: q, mode: 'insensitive' } },
+        { staffTitle: { contains: q, mode: 'insensitive' } },
+      ];
+    }
+
+    const users = await this.prisma.user.findMany({
+      where,
+      select: {
+        id: true,
+        fullName: true,
+        avatarUrl: true,
+        role: true,
+        staffTitle: true,
+      },
+      orderBy: [{ role: 'asc' }, { fullName: 'asc' }],
+      take: 50,
+    });
+
+    return users;
+  }
 
   async getMyConversations(user: AuthenticatedUser) {
     return this.prisma.conversation.findMany({
@@ -65,7 +98,44 @@ export class ChatService {
       throw new ForbiddenException('Chỉ Tổ trưởng hoặc Cán bộ tổ mới được tạo nhóm chat');
     }
 
-    const uniqueMemberIds = Array.from(new Set([user.id, ...dto.participantIds]));
+    const inputIds = dto.participantIds ?? [];
+    if (dto.type !== 'SUPPORT' && inputIds.length === 0) {
+      throw new BadRequestException('Vui lòng chọn ít nhất 1 thành viên để trò chuyện');
+    }
+
+    let uniqueMemberIds = Array.from(new Set([user.id, ...inputIds]));
+
+    if (dto.type === 'SUPPORT') {
+      const existingSupport = await this.prisma.conversation.findFirst({
+        where: {
+          neighborhoodId: user.neighborhoodId,
+          type: 'SUPPORT',
+          createdById: user.id,
+        },
+        include: {
+          members: {
+            include: {
+              user: { select: { id: true, fullName: true, avatarUrl: true, role: true } },
+            },
+          },
+        },
+      });
+      if (existingSupport) {
+        return existingSupport;
+      }
+
+      const officers = await this.prisma.user.findMany({
+        where: {
+          neighborhoodId: user.neighborhoodId,
+          role: { in: [UserRole.LEADER, UserRole.STAFF] },
+          deletedAt: null,
+          status: 'ACTIVE',
+        },
+        select: { id: true },
+        take: 5,
+      });
+      uniqueMemberIds = Array.from(new Set([user.id, ...officers.map((o) => o.id)]));
+    }
 
     if (dto.type === 'DIRECT' && uniqueMemberIds.length === 2) {
       const targetUserId = uniqueMemberIds.find((id) => id !== user.id)!;
@@ -158,10 +228,28 @@ export class ChatService {
       this.prisma.message.count({ where }),
     ]);
 
+    const msgIds = items.map((m) => m.id);
+    const attachments = msgIds.length
+      ? await this.prisma.attachment.findMany({
+          where: {
+            entityType: AttachmentEntityType.MESSAGE,
+            entityId: { in: msgIds },
+          },
+        })
+      : [];
+
+    const attMap = new Map<string, typeof attachments>();
+    for (const att of attachments) {
+      const list = attMap.get(att.entityId) ?? [];
+      list.push(att);
+      attMap.set(att.entityId, list);
+    }
+
     return {
       data: items.map((m) => ({
         ...m,
         content: m.isModerated ? '[Tin nhắn đã bị ẩn do vi phạm quy tắc cộng đồng]' : m.content,
+        attachments: attMap.get(m.id) ?? [],
       })),
       meta: { page, limit, total, totalPages: Math.ceil(total / limit) },
     };
@@ -192,6 +280,7 @@ export class ChatService {
       data: { lastMessageAt: new Date() },
     });
 
+    let createdAttachments: any[] = [];
     if (dto.attachmentUrls?.length) {
       await this.prisma.attachment.createMany({
         data: dto.attachmentUrls.map((url) => ({
@@ -199,9 +288,15 @@ export class ChatService {
           entityType: AttachmentEntityType.MESSAGE,
           entityId: message.id,
           url,
-          mimeType: 'application/octet-stream',
+          mimeType: 'image/jpeg',
           fileSize: 0,
         })),
+      });
+      createdAttachments = await this.prisma.attachment.findMany({
+        where: {
+          entityType: AttachmentEntityType.MESSAGE,
+          entityId: message.id,
+        },
       });
     }
 
@@ -223,7 +318,10 @@ export class ChatService {
       this.feedGateway.emitToUser(r.userId, 'notification.new', notif);
     }
 
-    return message;
+    return {
+      ...message,
+      attachments: createdAttachments,
+    };
   }
 
   async reportMessage(

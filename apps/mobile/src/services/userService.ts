@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiClient } from './apiClient';
+import { API_BASE_URL, apiClient } from './apiClient';
 import { AuthUser, useAuthStore } from '@/store/useAuthStore';
 
 export const USER_KEYS = {
@@ -94,6 +94,76 @@ export function useRequestAccountDeletion() {
     mutationFn: async (reason: string) => {
       const res = await apiClient.post('/api/v1/users/me/deletion-request', { reason });
       return res.data.data;
+    },
+  });
+}
+
+async function uploadAvatarUri(uri: string): Promise<string | null> {
+  if (!uri.startsWith('file://') && !uri.startsWith('content://')) {
+    return uri;
+  }
+  const token = useAuthStore.getState().accessToken;
+  const form = new FormData();
+  const filename = uri.split('/').pop() || `avatar-${Date.now()}.jpg`;
+  const match = /\.(\w+)$/.exec(filename);
+  const mimeType = match ? `image/${match[1].toLowerCase()}` : 'image/jpeg';
+
+  form.append('file', {
+    uri,
+    name: filename,
+    type: mimeType === 'image/jpg' ? 'image/jpeg' : mimeType,
+  } as any);
+
+  const res = await fetch(`${API_BASE_URL}/api/v1/upload`, {
+    method: 'POST',
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: form,
+  });
+
+  if (!res.ok) return null;
+  const json = await res.json();
+  const path = json?.data?.url || json?.url;
+  if (!path) return null;
+  return path.startsWith('http') ? path : `${API_BASE_URL}${path}`;
+}
+
+export function useUpdateProfile() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: {
+      fullName?: string;
+      email?: string;
+      localAvatarUri?: string | null;
+    }) => {
+      let avatarUrl: string | undefined;
+      if (payload.localAvatarUri) {
+        const uploaded = await uploadAvatarUri(payload.localAvatarUri);
+        if (uploaded) avatarUrl = uploaded;
+      }
+
+      const body: Record<string, any> = {};
+      if (payload.fullName?.trim()) body.fullName = payload.fullName.trim();
+      if (payload.email?.trim()) body.email = payload.email.trim();
+      if (avatarUrl) body.avatarUrl = avatarUrl;
+
+      const res = await apiClient.patch('/api/v1/users/me', body);
+      return res.data.data;
+    },
+    onSuccess: (updated) => {
+      const current = useAuthStore.getState().user;
+      if (current && updated) {
+        useAuthStore.getState().setUser({
+          ...current,
+          fullName: updated.fullName ?? current.fullName,
+          email: updated.email ?? current.email,
+          avatarUrl: updated.avatarUrl ?? current.avatarUrl,
+        });
+      }
+      queryClient.invalidateQueries({ queryKey: USER_KEYS.me });
+      queryClient.invalidateQueries({ queryKey: ['feed-posts'] });
+      queryClient.invalidateQueries({ queryKey: ['contacts'] });
     },
   });
 }

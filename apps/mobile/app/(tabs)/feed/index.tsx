@@ -70,16 +70,20 @@ export default function FeedScreen() {
   const updateReportStatus = useUpdateReportStatus();
   const startDirectChat = useStartDirectChat();
 
-  const handleMessageAuthor = (authorId: string) => {
+  const handleMessageAuthor = (authorId: string, authorName?: string) => {
     startDirectChat.mutate(authorId, {
       onSuccess: (conv) => {
-        router.push(`/(tabs)/connect/${conv.id}` as any);
+        router.push({
+          pathname: '/(tabs)/connect/[id]',
+          params: { id: conv.id, title: authorName || 'Trò chuyện' },
+        } as any);
       },
       onError: (err: any) => {
-        Alert.alert(
-          'Không thể nhắn tin',
-          err?.response?.data?.message || 'Không thể mở cuộc trò chuyện với cư dân này.',
-        );
+        const raw = err?.response?.data?.message || err?.message;
+        const msg = Array.isArray(raw)
+          ? raw.join('\n')
+          : raw || 'Không thể mở cuộc trò chuyện với cư dân này.';
+        Alert.alert('Không thể nhắn tin', msg);
       },
     });
   };
@@ -432,7 +436,9 @@ export default function FeedScreen() {
                   post={item.data}
                   onPressDetail={() => router.push(`/(tabs)/feed/post/${item.data.id}` as any)}
                   onReact={(type) => toggleReaction.mutate({ postId: item.data.id, type })}
-                  onMessageAuthor={() => handleMessageAuthor(item.data.authorId)}
+                  onMessageAuthor={() =>
+                    handleMessageAuthor(item.data.authorId, item.data.author?.fullName)
+                  }
                   onTogglePin={() => togglePin.mutate(item.data.id)}
                   onDelete={() => deletePost.mutate(item.data.id)}
                 />

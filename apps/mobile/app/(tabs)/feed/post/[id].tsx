@@ -211,12 +211,18 @@ export default function PostDetailScreen() {
           onReact={(type) => toggleReaction.mutate({ postId: post.id, type })}
           onMessageAuthor={() =>
             startDirectChat.mutate(post.authorId, {
-              onSuccess: (conv) => router.push(`/(tabs)/connect/${conv.id}` as any),
-              onError: (err: any) =>
-                Alert.alert(
-                  'Không thể nhắn tin',
-                  err?.response?.data?.message || 'Không thể mở cuộc trò chuyện với cư dân này.',
-                ),
+              onSuccess: (conv) =>
+                router.push({
+                  pathname: '/(tabs)/connect/[id]',
+                  params: { id: conv.id, title: post.author?.fullName || 'Trò chuyện' },
+                } as any),
+              onError: (err: any) => {
+                const raw = err?.response?.data?.message || err?.message;
+                const msg = Array.isArray(raw)
+                  ? raw.join('\n')
+                  : raw || 'Không thể mở cuộc trò chuyện với cư dân này.';
+                Alert.alert('Không thể nhắn tin', msg);
+              },
             })
           }
           onTogglePin={() => togglePin.mutate(post.id)}
